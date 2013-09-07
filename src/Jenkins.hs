@@ -19,7 +19,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (MonadResource)
-import           Data.Monoid ((<>))
+import           Data.Monoid (Monoid(..), (<>))
 import           Data.String (IsString(..))
 import           Network.HTTP.Conduit
 
@@ -79,8 +79,8 @@ nicely (x :- AsJSON)   = nicely x -/- "api" -/- "json"
 nicely (x :- AsXML)    = nicely x -/- "api" -/- "xml"
 nicely (x :- AsPython) = nicely x -/- "api" -/- "python"
 
-(-/-) :: String -> String -> String
-x -/- y = x ++ "/" ++ y
+(-/-) :: (IsString m, Monoid m) => m -> m -> m
+x -/- y = x <> "/" <> y
 
 
 type Host     = String
@@ -103,6 +103,6 @@ interpret
   => Manager -> Request m -> Jenk a -> m a
 interpret manager request = iterM go . unJenk where
   go (Get method next) = do
-    let request' = request { path = path request <> "/" <> BC.pack (nicely method) }
+    let request' = request { path = path request -/- BC.pack (nicely method) }
     bs <- httpLbs request' manager
     next (responseBody bs)
