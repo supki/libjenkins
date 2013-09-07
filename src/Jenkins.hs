@@ -69,6 +69,9 @@ data As :: Format -> * where
   AsXML    :: As XML
   AsPython :: As Python
 
+(-/-) :: Method f -> Method f -> Method f
+(-/-) = (:/)
+
 as :: Method f -> As f -> Method f
 as = (:-)
 
@@ -90,13 +93,13 @@ nicely :: Method f -> String
 nicely Empty           = ""
 nicely (Number n)      = show n
 nicely (String s)      = s
-nicely (x :/ y)        = nicely x -/- nicely y
-nicely (x :- AsJSON)   = nicely x -/- "api" -/- "json"
-nicely (x :- AsXML)    = nicely x -/- "api" -/- "xml"
-nicely (x :- AsPython) = nicely x -/- "api" -/- "python"
+nicely (x :/ y)        = nicely x `combine` nicely y
+nicely (x :- AsJSON)   = nicely x `combine` "api" `combine` "json"
+nicely (x :- AsXML)    = nicely x `combine` "api" `combine` "xml"
+nicely (x :- AsPython) = nicely x `combine` "api" `combine` "python"
 
-(-/-) :: (IsString m, Monoid m) => m -> m -> m
-x -/- y = x <> "/" <> y
+combine :: (IsString m, Monoid m) => m -> m -> m
+combine x y = x <> "/" <> y
 
 
 type Host     = String
@@ -123,13 +126,13 @@ interpret
 interpret manager request = iterM go . unJenk where
   go (Get method next) = do
     let request' = request
-          & L.path %~ (-/- BC.pack (nicely method))
+          & L.path   %~ (`combine` BC.pack (nicely method))
           & L.method .~ "GET"
     bs <- httpLbs request' manager
     next (responseBody bs)
   go (Post method next) = do
     let request' = request
-          & L.path   %~ (-/- BC.pack (nicely method))
+          & L.path   %~ (`combine` BC.pack (nicely method))
           & L.method .~ "POST"
     bs <- httpLbs request' manager
     next (responseBody bs)
