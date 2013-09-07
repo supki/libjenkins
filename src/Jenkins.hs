@@ -1,14 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 module Jenkins where
 
 import           Control.Concurrent.Async (mapConcurrently)
 import           Control.Lens
-import           Control.Applicative (Applicative)
+import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free
 import           Control.Monad.Trans.Control (liftWith, restoreT)
 import           Control.Monad.IO.Class (liftIO)
@@ -23,7 +22,22 @@ import           Jenkins.REST.Method
 
 
 newtype Jenk a = Jenk { unJenk :: Free JenkF a }
-  deriving (Functor, Applicative, Monad)
+
+instance Functor Jenk where
+  fmap f = Jenk . fmap f . unJenk
+  {-# INLINE fmap #-}
+
+instance Applicative Jenk where
+  pure = Jenk . pure
+  {-# INLINE pure #-}
+  Jenk f <*> Jenk x = Jenk (f <*> x)
+  {-# INLINE (<*>) #-}
+
+instance Monad Jenk where
+  return = pure
+  {-# INLINE return #-}
+  Jenk x >>= k = Jenk (x >>= unJenk . k)
+  {-# INLINE (>>=) #-}
 
 
 data JenkF a =
