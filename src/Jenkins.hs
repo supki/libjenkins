@@ -6,6 +6,7 @@
 module Jenkins where
 
 import           Control.Concurrent.Async (mapConcurrently)
+import           Control.Exception (try)
 import           Control.Lens
 import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free
@@ -15,7 +16,9 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
 import           Network.HTTP.Conduit
-  (Manager, Request, RequestBody(..), withManager, applyBasicAuth, httpLbs, parseUrl, responseBody)
+  ( Manager, Request, RequestBody(..), HttpException
+  , withManager, applyBasicAuth, httpLbs, parseUrl, responseBody
+  )
 import qualified Network.HTTP.Conduit.Lens as L
 
 import           Jenkins.REST.Method
@@ -68,8 +71,8 @@ type User     = B.ByteString
 type Password = B.ByteString
 
 
-withJenkins :: Host -> Port -> User -> Password -> Jenk a -> IO a
-withJenkins h p user password jenk = withManager $ \manager -> do
+withJenkins :: Host -> Port -> User -> Password -> Jenk a -> IO (Either HttpException a)
+withJenkins h p user password jenk = try . withManager $ \manager -> do
   request <- liftIO $ parseUrl h
   let request' = request
         & L.port .~ p
@@ -92,5 +95,7 @@ interpret manager request = iterM go . unJenk where
     bs <- httpLbs request' manager
     next (responseBody bs)
   go (Concurrently js next) = do
-    xs <- liftWith (\run -> mapConcurrently (run . interpret manager request) js) >>= mapM (restoreT . return)
-    next xs
+    xs <- liftWith (\run ->
+           mapConcurrently (run . interpret manager request) js)
+    ys <- mapM (restoreT . return) xs
+    next ys
