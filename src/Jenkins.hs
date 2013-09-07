@@ -15,7 +15,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
 import           Network.HTTP.Conduit
-  (Manager, Request, withManager, applyBasicAuth, httpLbs, parseUrl, responseBody)
+  (Manager, Request, RequestBody(..), withManager, applyBasicAuth, httpLbs, parseUrl, responseBody)
 import qualified Network.HTTP.Conduit.Lens as L
 
 import           Jenkins.REST.Method
@@ -42,12 +42,12 @@ instance Monad Jenk where
 
 data JenkF a =
     forall f. Get (Method f) (BL.ByteString -> a)
-  | Post (forall f. Method f) (BL.ByteString -> a)
+  | Post (forall f. Method f) BL.ByteString (BL.ByteString -> a)
   | forall b. Concurrently [Jenk b] ([b] -> a)
 
 instance Functor JenkF where
-  fmap f (Get  m g)          = Get  m (f . g)
-  fmap f (Post m g)          = Post m (f . g)
+  fmap f (Get  m g)          = Get  m      (f . g)
+  fmap f (Post m body g)     = Post m body (f . g)
   fmap f (Concurrently ms g) = Concurrently ms (f . g)
   {-# INLINE fmap #-}
 
@@ -55,8 +55,8 @@ instance Functor JenkF where
 get :: Method f -> Jenk BL.ByteString
 get m = Jenk . liftF $ Get m id
 
-post :: (forall f. Method f) -> Jenk BL.ByteString
-post m = Jenk . liftF $ Post m id
+post :: (forall f. Method f) -> BL.ByteString -> Jenk BL.ByteString
+post m body = Jenk . liftF $ Post m body id
 
 concurrently :: [Jenk a] -> Jenk [a]
 concurrently js = Jenk . liftF $ Concurrently js id
@@ -84,10 +84,11 @@ interpret manager request = iterM go . unJenk where
           & L.method .~ "GET"
     bs <- httpLbs request' manager
     next (responseBody bs)
-  go (Post m next) = do
+  go (Post m body next) = do
     let request' = request
-          & L.path   %~ (`combine` render m)
-          & L.method .~ "POST"
+          & L.path        %~ (`combine` render m)
+          & L.method      .~ "POST"
+          & L.requestBody .~ RequestBodyLBS body
     bs <- httpLbs request' manager
     next (responseBody bs)
   go (Concurrently js next) = do
