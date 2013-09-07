@@ -43,7 +43,7 @@ instance Functor JenkF where
   fmap f (Post m g) = Post m (f . g)
   {-# INLINE fmap #-}
 
-infixl 6 :-
+infix  6 :-, `as`
 infixr 7 :/
 data Method :: Format -> * where
   Empty  :: Method a
@@ -62,13 +62,24 @@ instance Num (Method f) where
 instance IsString (Method f) where
   fromString = String
 
-
 data Format = JSON | XML | Python
 
 data As :: Format -> * where
   AsJSON   :: As JSON
   AsXML    :: As XML
   AsPython :: As Python
+
+as :: Method f -> As f -> Method f
+as = (:-)
+
+json :: As JSON
+json = AsJSON
+
+xml :: As XML
+xml = AsXML
+
+python :: As Python
+python = AsPython
 
 
 -- |
