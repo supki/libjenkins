@@ -11,6 +11,7 @@
 {-# OPTIONS_GHC -W #-}
 module Jenkins where
 
+import           Control.Lens
 import           Control.Applicative (Applicative)
 import           Control.Monad.Free
 import           Control.Monad.Trans.Control (MonadBaseControl)
@@ -22,6 +23,7 @@ import           Data.Conduit (MonadResource)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.String (IsString(..))
 import           Network.HTTP.Conduit
+import qualified Network.HTTP.Conduit.Lens as L
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -103,6 +105,7 @@ interpret
   => Manager -> Request m -> Jenk a -> m a
 interpret manager request = iterM go . unJenk where
   go (Get method next) = do
-    let request' = request { path = path request -/- BC.pack (nicely method) }
+    let request' = request
+          & L.path %~ (-/- BC.pack (nicely method))
     bs <- httpLbs request' manager
     next (responseBody bs)
