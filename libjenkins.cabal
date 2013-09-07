@@ -23,7 +23,8 @@ library
   other-modules:
     Network.HTTP.Conduit.Lens
   build-depends:
-      base          >= 4.6  && < 4.7
+      async         >= 2.0  && < 2.1
+    , base          >= 4.6  && < 4.7
     , bytestring    >= 0.10 && < 0.11
     , conduit       >= 1.0  && < 1.1
     , free          >= 3.4  && < 3.5
