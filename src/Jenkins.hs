@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -W #-}
 module Jenkins where
@@ -35,9 +36,11 @@ newtype Jenk a = Jenk { unJenk :: (Free JenkF a) }
 
 data JenkF a =
     forall f. Get (Method f) (BL.ByteString -> a)
+  | Post (forall f. (Method f)) (BL.ByteString -> a)
 
 instance Functor JenkF where
-  fmap f (Get m g) = Get m (f . g)
+  fmap f (Get  m g) = Get m  (f . g)
+  fmap f (Post m g) = Post m (f . g)
   {-# INLINE fmap #-}
 
 infixl 6 :-
@@ -94,6 +97,9 @@ type Password = B.ByteString
 get :: Method f -> Jenk BL.ByteString
 get m = Jenk . liftF $ Get m id
 
+post :: (forall f. Method f) -> Jenk BL.ByteString
+post m = Jenk . liftF $ Post m id
+
 
 withJenkins :: Host -> Port -> User -> Password -> Jenk a -> IO a
 withJenkins host port user password jenk = withManager $ \manager -> do
@@ -107,5 +113,12 @@ interpret manager request = iterM go . unJenk where
   go (Get method next) = do
     let request' = request
           & L.path %~ (-/- BC.pack (nicely method))
+          & L.method .~ "GET"
+    bs <- httpLbs request' manager
+    next (responseBody bs)
+  go (Post method next) = do
+    let request' = request
+          & L.path   %~ (-/- BC.pack (nicely method))
+          & L.method .~ "POST"
     bs <- httpLbs request' manager
     next (responseBody bs)
