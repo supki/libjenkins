@@ -74,6 +74,7 @@ type Host     = String
 type Port     = Int
 type User     = B.ByteString
 type Password = B.ByteString
+type APIToken = B.ByteString
 
 
 withJenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either HttpException a)
