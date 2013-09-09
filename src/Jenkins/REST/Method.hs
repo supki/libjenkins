@@ -1,7 +1,10 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 -- | Jenkins RESTful API methods construction
 module Jenkins.REST.Method
   ( -- * Types
@@ -32,6 +35,8 @@ data Method :: Format -> * where
   (:/)  :: Method f -> Method f -> Method f
   (:-)  :: Method f -> As f -> Method f
 
+deriving instance Show (As f) => Show (Method f)
+
 instance Monoid (Method f) where
   mempty  = Empty
   mappend = (:/)
@@ -55,6 +60,8 @@ data As :: Format -> * where
   AsJSON   :: As JSON
   AsXML    :: As XML
   AsPython :: As Python
+
+deriving instance Show (As f)
 
 -- | Append 2 methods
 (-/-) :: Method f -> Method f -> Method f
@@ -99,5 +106,11 @@ render (x :- AsPython) = render x `combine` "api" `combine` "python"
 --
 -- >>> combine "foo" "bar"
 -- "foo/bar"
+--
+-- >>> combine "" "foo"
+-- "/foo"
+--
+-- >>> combine "foo" ""
+-- "foo/"
 combine :: (IsString m, Monoid m) => m -> m -> m
 combine x y = x <> "/" <> y
