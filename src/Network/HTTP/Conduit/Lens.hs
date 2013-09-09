@@ -4,9 +4,11 @@ module Network.HTTP.Conduit.Lens
     method, secure
   , host, port
   , path, queryString, requestBody
+  , redirectCount, checkStatus
   ) where
 
 import           Control.Applicative ((<$>))
+import           Control.Exception (SomeException)
 import           Control.Lens
 import           Data.ByteString (ByteString)
 import qualified Network.HTTP.Conduit as H
@@ -36,3 +38,12 @@ queryString f req = (\qs' -> req { H.queryString = qs' }) <$> f (H.queryString r
 
 requestBody :: Lens' (H.Request m) (H.RequestBody m)
 requestBody f req = (\rb' -> req { H.requestBody = rb' }) <$> f (H.requestBody req)
+
+-- | How many redirects to follow when getting a resource. 0 means follow no redirects. Default value: 10.
+redirectCount :: Lens' (H.Request m) Int
+redirectCount f req = (\rc' -> req { H.redirectCount = rc' }) <$> f (H.redirectCount req)
+
+-- | Check the status code. Note that this will run after all redirects are performed.
+-- Default: return a StatusCodeException on non-2XX responses.
+checkStatus :: Lens' (H.Request m) (H.Status -> H.ResponseHeaders -> H.CookieJar -> Maybe SomeException)
+checkStatus f req = (\cs' -> req { H.checkStatus = cs' }) <$> f (H.checkStatus req)

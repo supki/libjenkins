@@ -6,7 +6,7 @@
 module Jenkins where
 
 import           Control.Concurrent.Async (mapConcurrently)
-import           Control.Exception (try)
+import           Control.Exception (try, toException)
 import           Control.Lens
 import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free
@@ -18,10 +18,15 @@ import           Data.Conduit (ResourceT)
 import           Network.HTTP.Conduit
   ( Manager, Request, RequestBody(..), HttpException
   , withManager, applyBasicAuth, httpLbs, parseUrl, responseBody
+  , HttpException(..)
   )
+import           Network.HTTP.Types
+  (Status(..))
 import qualified Network.HTTP.Conduit.Lens as L
 
 import           Jenkins.REST.Method
+
+{-# ANN module ("HLint: Use const" :: String) #-}
 
 
 newtype Jenk a = Jenk { unJenk :: Free JenkF a }
@@ -58,8 +63,8 @@ instance Functor JenkF where
 get :: Method f -> Jenk BL.ByteString
 get m = Jenk . liftF $ Get m id
 
-post :: (forall f. Method f) -> BL.ByteString -> Jenk BL.ByteString
-post m body = Jenk . liftF $ Post m body id
+post :: (forall f. Method f) -> BL.ByteString -> Jenk ()
+post m body = Jenk . liftF $ Post m body (\_ -> ())
 
 concurrently :: [Jenk a] -> Jenk [a]
 concurrently js = Jenk . liftF $ Concurrently js id
@@ -89,9 +94,14 @@ interpret manager request = iterM go . unJenk where
     next (responseBody bs)
   go (Post m body next) = do
     let request' = request
-          & L.path        %~ (`combine` render m)
-          & L.method      .~ "POST"
-          & L.requestBody .~ RequestBodyLBS body
+          & L.path          %~ (`combine` render m)
+          & L.method        .~ "POST"
+          & L.requestBody   .~ RequestBodyLBS body
+          & L.redirectCount .~ 0
+          & L.checkStatus   .~ \s@(Status st _) hs cookie_jar ->
+            if 200 <= st && st < 400
+                then Nothing
+                else Just . toException $ StatusCodeException s hs cookie_jar
     bs <- httpLbs request' manager
     next (responseBody bs)
   go (Concurrently js next) = do
