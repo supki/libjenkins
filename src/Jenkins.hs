@@ -49,8 +49,8 @@ instance Monad Jenkins where
 
 
 data JenkinsF a =
-    forall f. Get (Method f) (BL.ByteString -> a)
-  | Post (forall f. Method f) BL.ByteString (BL.ByteString -> a)
+    forall f t. Get (Method t f) (BL.ByteString -> a)
+  | forall t. Post (forall f. Method t f) BL.ByteString (BL.ByteString -> a)
   | forall b. Concurrently [Jenkins b] ([b] -> a)
 
 instance Functor JenkinsF where
@@ -60,10 +60,10 @@ instance Functor JenkinsF where
   {-# INLINE fmap #-}
 
 
-get :: Method f -> Jenkins BL.ByteString
+get :: Method t f -> Jenkins BL.ByteString
 get m = Jenkins . liftF $ Get m id
 
-post :: (forall f. Method f) -> BL.ByteString -> Jenkins ()
+post :: (forall f. Method t f) -> BL.ByteString -> Jenkins ()
 post m body = Jenkins . liftF $ Post m body (\_ -> ())
 
 concurrently :: [Jenkins a] -> Jenkins [a]
@@ -90,13 +90,13 @@ interpret
 interpret manager request = iterM go . unJenkins where
   go (Get m next) = do
     let request' = request
-          & L.path   %~ (`combine` render m)
+          & L.path   %~ (`slash` render m)
           & L.method .~ "GET"
     bs <- httpLbs request' manager
     next (responseBody bs)
   go (Post m body next) = do
     let request' = request
-          & L.path          %~ (`combine` render m)
+          & L.path          %~ (`slash` render m)
           & L.method        .~ "POST"
           & L.requestBody   .~ RequestBodyLBS body
           & L.redirectCount .~ 0
