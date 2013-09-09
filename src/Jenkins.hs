@@ -29,45 +29,45 @@ import           Jenkins.REST.Method
 {-# ANN module ("HLint: Use const" :: String) #-}
 
 
-newtype Jenk a = Jenk { unJenk :: Free JenkF a }
+newtype Jenkins a = Jenkins { unJenkins :: Free JenkinsF a }
 
-instance Functor Jenk where
-  fmap f = Jenk . fmap f . unJenk
+instance Functor Jenkins where
+  fmap f = Jenkins . fmap f . unJenkins
   {-# INLINE fmap #-}
 
-instance Applicative Jenk where
-  pure = Jenk . pure
+instance Applicative Jenkins where
+  pure = Jenkins . pure
   {-# INLINE pure #-}
-  Jenk f <*> Jenk x = Jenk (f <*> x)
+  Jenkins f <*> Jenkins x = Jenkins (f <*> x)
   {-# INLINE (<*>) #-}
 
-instance Monad Jenk where
+instance Monad Jenkins where
   return = pure
   {-# INLINE return #-}
-  Jenk x >>= k = Jenk (x >>= unJenk . k)
+  Jenkins x >>= k = Jenkins (x >>= unJenkins . k)
   {-# INLINE (>>=) #-}
 
 
-data JenkF a =
+data JenkinsF a =
     forall f. Get (Method f) (BL.ByteString -> a)
   | Post (forall f. Method f) BL.ByteString (BL.ByteString -> a)
-  | forall b. Concurrently [Jenk b] ([b] -> a)
+  | forall b. Concurrently [Jenkins b] ([b] -> a)
 
-instance Functor JenkF where
+instance Functor JenkinsF where
   fmap f (Get  m g)          = Get  m      (f . g)
   fmap f (Post m body g)     = Post m body (f . g)
   fmap f (Concurrently ms g) = Concurrently ms (f . g)
   {-# INLINE fmap #-}
 
 
-get :: Method f -> Jenk BL.ByteString
-get m = Jenk . liftF $ Get m id
+get :: Method f -> Jenkins BL.ByteString
+get m = Jenkins . liftF $ Get m id
 
-post :: (forall f. Method f) -> BL.ByteString -> Jenk ()
-post m body = Jenk . liftF $ Post m body (\_ -> ())
+post :: (forall f. Method f) -> BL.ByteString -> Jenkins ()
+post m body = Jenkins . liftF $ Post m body (\_ -> ())
 
-concurrently :: [Jenk a] -> Jenk [a]
-concurrently js = Jenk . liftF $ Concurrently js id
+concurrently :: [Jenkins a] -> Jenkins [a]
+concurrently js = Jenkins . liftF $ Concurrently js id
 
 
 type Host     = String
@@ -76,7 +76,7 @@ type User     = B.ByteString
 type Password = B.ByteString
 
 
-withJenkins :: Host -> Port -> User -> Password -> Jenk a -> IO (Either HttpException a)
+withJenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either HttpException a)
 withJenkins h p user password jenk = try . withManager $ \manager -> do
   request <- liftIO $ parseUrl h
   let request' = request
@@ -84,8 +84,8 @@ withJenkins h p user password jenk = try . withManager $ \manager -> do
   interpret manager (applyBasicAuth user password request') jenk
 
 interpret
-  :: Manager -> Request (ResourceT IO) -> Jenk a -> ResourceT IO a
-interpret manager request = iterM go . unJenk where
+  :: Manager -> Request (ResourceT IO) -> Jenkins a -> ResourceT IO a
+interpret manager request = iterM go . unJenkins where
   go (Get m next) = do
     let request' = request
           & L.path   %~ (`combine` render m)
