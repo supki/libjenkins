@@ -10,7 +10,7 @@ module Jenkins.REST.Method
   ( -- * Types
     Method, As, Format
     -- * User interface helpers
-  , (-/-), as, json, xml, python
+  , text, (-/-), as, json, xml, python
     -- * Rendering
   , render, combine
   ) where
@@ -62,6 +62,9 @@ data As :: Format -> * where
   AsPython :: As Python
 
 deriving instance Show (As f)
+
+text :: Text -> Method f
+text = Text
 
 -- | Append 2 methods
 (-/-) :: Method f -> Method f -> Method f
