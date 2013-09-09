@@ -1,0 +1,23 @@
+name:                libjenkins-examples
+version:             0.1.0.0
+synopsis:            libjenkins library examples
+license:             BSD3
+license-file:        LICENSE
+author:              Matvey Aksenov
+maintainer:          matvey.aksenov@gmail.com
+category:            Network
+build-type:          Simple
+extra-source-files:  README.md
+cabal-version:       >= 1.10
+
+executable jenkins-failed-jobs
+  default-language:  Haskell2010
+  main-is:           Failed.hs
+  build-depends:
+      base
+    , bytestring
+    , lens
+    , lens-aeson
+    , libjenkins
+    , optparse-applicative
+    , text

@@ -7,11 +7,9 @@ import           Control.Lens
 import           Control.Lens.Aeson
 import           Control.Monad (filterM)
 import qualified Data.ByteString.Char8 as B
-import           Data.Text (Text)
 import qualified Data.Text.IO as T
 import           Jenkins
 import           Jenkins.REST.Method
-import           Network.HTTP.Conduit (HttpException)
 import           Options.Applicative
 import           System.Exit (exitFailure)
 
@@ -35,6 +33,13 @@ main = do
     Left  e  -> do
       print e
       exitFailure
+ where
+  find_failed (Options { url, port, user, password }) = withJenkins url port user password $ do
+    res <- get ("" `as` json)
+    let jobs = res ^.. key "jobs"._Array.each.key "name"._String
+    flip filterM jobs $ \job -> do
+      res' <- get ("job" -/- text job `as` json)
+      return $ elemOf (key "color") "red" res'
 
 options :: ParserInfo Options
 options = info (helper <*> parser) fullDesc
@@ -44,11 +49,3 @@ options = info (helper <*> parser) fullDesc
     <*> option (long "port" <> short 'p')
     <*> nullOption (reader (return . B.pack) <> long "user" <> short 'u')
     <*> nullOption (reader (return . B.pack) <> long "token" <> short 't')
-
-find_failed :: Options -> IO (Either HttpException [Text])
-find_failed (Options { url, port, user, password }) = withJenkins url port user password $ do
-  res <- get ("" `as` json)
-  let jobs = res ^.. key "jobs"._Array.each.key "name"._String
-  flip filterM jobs $ \job -> do
-    res' <- get ("job" -/- text job `as` json)
-    return $ elemOf (key "color") "red" res'
