@@ -81,7 +81,8 @@ withJenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either HttpE
 withJenkins h p user password jenk = try . withManager $ \manager -> do
   request <- liftIO $ parseUrl h
   let request' = request
-        & L.port .~ p
+        & L.port            .~ p
+        & L.responseTimeout .~ Just (20 * 1000000)
   interpret manager (applyBasicAuth user password request') jenk
 
 interpret

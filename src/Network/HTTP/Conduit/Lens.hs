@@ -4,7 +4,7 @@ module Network.HTTP.Conduit.Lens
     method, secure
   , host, port
   , path, queryString, requestBody
-  , redirectCount, checkStatus
+  , redirectCount, checkStatus, responseTimeout
   ) where
 
 import           Control.Applicative ((<$>))
@@ -47,3 +47,7 @@ redirectCount f req = (\rc' -> req { H.redirectCount = rc' }) <$> f (H.redirectC
 -- Default: return a StatusCodeException on non-2XX responses.
 checkStatus :: Lens' (H.Request m) (H.Status -> H.ResponseHeaders -> H.CookieJar -> Maybe SomeException)
 checkStatus f req = (\cs' -> req { H.checkStatus = cs' }) <$> f (H.checkStatus req)
+
+-- | Number of microseconds to wait for a response. If Nothing, will wait indefinitely. Default: 5 seconds.
+responseTimeout :: Lens' (H.Request m) (Maybe Int)
+responseTimeout f req = (\rt' -> req { H.responseTimeout = rt' }) <$> f (H.responseTimeout req)
