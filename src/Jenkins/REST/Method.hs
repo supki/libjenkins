@@ -9,9 +9,9 @@
 -- | Jenkins RESTful API methods construction
 module Jenkins.REST.Method
   ( -- * Types
-    Method, As, Format
+    Method, Type(..), Format, As
     -- * User interface helpers
-  , text, (?), (-/-), (-=-), (-&-), as, json, xml, python
+  , text, (?), (-/-), (-=-), (-&-), as, json, xml, python, query
     -- * Rendering
   , render, slash
   ) where
@@ -34,31 +34,31 @@ infixr 5 :~/, -/-, :~&, -&-
 -- | Jenkins RESTFul API method encoding
 data Method :: Type -> Format -> * where
   Empty :: Method t f
-  Text  :: Text -> Method Path f
-  (:~/)  :: Method Path f -> Method Path f -> Method Path f
-  (:~@)  :: Method Path f -> As f -> Method Path f
+  Text  :: Text -> Method Complete f
+  (:~/)  :: Method Complete f -> Method Complete f -> Method Complete f
+  (:~@)  :: Method Complete f -> As f -> Method Complete f
   (:~=)  :: Text -> Maybe Text -> Method Query f
   (:~&)  :: Method Query f -> Method Query f -> Method Query f
-  (:~?)  :: Method Path f -> Method Query f -> Method Full f
+  (:~?)  :: Method Complete f -> Method Query f -> Method Complete f
 
 deriving instance Show (As f) => Show (Method t f)
 
 -- | Only to support number literals
-instance Num (Method Path f) where
+instance Num (Method Complete f) where
   (+)         = error "Method.(+): not supposed to be used"
   (*)         = error "Method.(*): not supposed to be used"
   abs         = error "Method.abs: not supposed to be used"
   signum      = error "Method.signum: not supposed to be used"
   fromInteger = fromString . show
 
-instance IsString (Method Path f) where
+instance IsString (Method Complete f) where
   fromString = Text . T.pack
 
 instance IsString (Method Query f) where
   fromString str = T.pack str :~= Nothing
 
 -- | Method types
-data Type = Path | Query | Full
+data Type = Query | Complete
 
 -- | Response formats
 data Format = JSON | XML | Python
@@ -71,11 +71,11 @@ data As :: Format -> * where
 
 deriving instance Show (As f)
 
-text :: Text -> Method Path f
+text :: Text -> Method Complete f
 text = Text
 
 -- | Append 2 paths
-(-/-) :: Method Path f -> Method Path f -> Method Path f
+(-/-) :: Method Complete f -> Method Complete f -> Method Complete f
 (-/-) = (:~/)
 
 -- | Append 2 queries
@@ -87,7 +87,7 @@ text = Text
 x -=- y = x :~= Just y
 
 -- | Choose response format
-as :: Method Path f -> As f -> Method Path f
+as :: Method Complete f -> As f -> Method Complete f
 as = (:~@)
 
 -- | JSON response format
@@ -103,8 +103,19 @@ python :: As Python
 python = AsPython
 
 -- | Append path and query
-(?) :: Method Path f -> Method Query f -> Method Full f
+(?) :: Method Complete f -> Method Query f -> Method Complete f
 (?) = (:~?)
+
+-- | list-to-query combinator
+--
+-- >>> render (query [("foo", Nothing), ("bar", Just "baz"), ("quux", Nothing)])
+-- "foo&bar=baz&quux"
+--
+-- >>> render (query [])
+-- ""
+query :: [(Text, Maybe Text)] -> Method Query f
+query [] = Empty
+query xs = foldr1 (:~&) (map (uncurry (:~=)) xs)
 
 
 -- | Render 'Method' to something that can be sent over the wire

@@ -49,8 +49,8 @@ instance Monad Jenkins where
 
 
 data JenkinsF a =
-    forall f t. Get (Method t f) (BL.ByteString -> a)
-  | forall t. Post (forall f. Method t f) BL.ByteString (BL.ByteString -> a)
+    forall f. Get (Method Complete f) (BL.ByteString -> a)
+  | Post (forall f. Method Complete f) BL.ByteString (BL.ByteString -> a)
   | forall b. Concurrently [Jenkins b] ([b] -> a)
 
 instance Functor JenkinsF where
@@ -60,10 +60,10 @@ instance Functor JenkinsF where
   {-# INLINE fmap #-}
 
 
-get :: Method t f -> Jenkins BL.ByteString
+get :: Method Complete f -> Jenkins BL.ByteString
 get m = Jenkins . liftF $ Get m id
 
-post :: (forall f. Method t f) -> BL.ByteString -> Jenkins ()
+post :: (forall f. Method Complete f) -> BL.ByteString -> Jenkins ()
 post m body = Jenkins . liftF $ Post m body (\_ -> ())
 
 concurrently :: [Jenkins a] -> Jenkins [a]
