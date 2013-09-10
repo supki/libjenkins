@@ -2,7 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-module Jenkins where
+module Jenkins.REST where
 
 import           Control.Concurrent.Async (mapConcurrently)
 import           Control.Exception (try, toException)
@@ -99,17 +99,18 @@ type Password = B.ByteString
 type APIToken = B.ByteString
 
 
-withJenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either HttpException a)
-withJenkins h p user password jenk = try . withManager $ \manager -> do
+-- | Communicate with Jenkins REST API. Only catches exceptions from @http-conduit@ package;
+-- does not catch exceptions from lifted arbitrary 'IO' actions
+jenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either HttpException a)
+jenkins h p user password jenk = try . withManager $ \manager -> do
   request <- liftIO $ parseUrl h
   let request' = request
         & L.port            .~ p
         & L.responseTimeout .~ Just (20 * 1000000)
-  interpret manager (applyBasicAuth user password request') jenk
+  runIO manager (applyBasicAuth user password request') jenk
 
-interpret
-  :: Manager -> Request (ResourceT IO) -> Jenkins a -> ResourceT IO a
-interpret manager request = iterM go . unJenkins where
+runIO :: Manager -> Request (ResourceT IO) -> Jenkins a -> ResourceT IO a
+runIO manager request = iterM go . unJenkins where
   go (Get m next) = do
     let request' = request
           & L.path   %~ (`slash` render m)
@@ -130,7 +131,7 @@ interpret manager request = iterM go . unJenkins where
     next (responseBody bs)
   go (Conc js next) = do
     xs <- liftWith (\run ->
-           mapConcurrently (run . interpret manager request) js)
+           mapConcurrently (run . runIO manager request) js)
     ys <- mapM (restoreT . return) xs
     next ys
   go (IO action) = do

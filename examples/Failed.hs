@@ -8,7 +8,7 @@ import           Control.Lens.Aeson
 import qualified Data.ByteString.Char8 as B
 import           Data.Text (Text)
 import qualified Data.Text.IO as T
-import           Jenkins
+import           Jenkins.REST
 import           Jenkins.REST.Method
 import           Options.Applicative
 import           System.Exit (exitFailure)
@@ -34,11 +34,12 @@ main = do
       print e
       exitFailure
  where
-  find_failed (Options { url, port, user, password }) = withJenkins url port user password $ do
-    res <- get ("" `as` json)
-    let jobs = res ^.. key "jobs"._Array.each.key "name"._String
-    failed <- concurrently (map failure jobs)
-    return (zip failed jobs ^.. folded.filtered(view _1)._2)
+  find_failed (Options { url, port, user, password }) =
+    jenkins url port user password $ do
+      res <- get ("" `as` json)
+      let jobs = res ^.. key "jobs"._Array.each.key "name"._String
+      failed <- concurrently (map failure jobs)
+      return (zip failed jobs ^.. folded.filtered(view _1)._2)
 
   failure :: Text -> Jenkins Bool
   failure job = do
