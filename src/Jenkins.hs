@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,7 +10,7 @@ import           Control.Lens
 import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free.Church (F, iterM, liftF)
 import           Control.Monad.Trans.Control (liftWith, restoreT)
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.IO.Class (MonadIO(..))
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
@@ -47,27 +46,50 @@ instance Monad Jenkins where
   Jenkins x >>= k = Jenkins (x >>= unJenkins . k)
   {-# INLINE (>>=) #-}
 
+instance MonadIO Jenkins where
+  liftIO = liftJ . IO
+  {-# INLINE liftIO #-}
 
-data JenkinsF a =
-    forall f. Get (Method Complete f) (BL.ByteString -> a)
-  | Post (forall f. Method Complete f) BL.ByteString (BL.ByteString -> a)
-  | forall b. Concurrently [Jenkins b] ([b] -> a)
+-- | 'JenkinsF' terms
+data JenkinsF a where
+  Get  :: Method Complete f -> (BL.ByteString -> a) -> JenkinsF a
+  Post :: (forall f. Method Complete f) -> BL.ByteString -> (BL.ByteString -> a) -> JenkinsF a
+  Conc :: [Jenkins b] -> ([b] -> a) -> JenkinsF a
+  IO   :: IO a -> JenkinsF a
 
 instance Functor JenkinsF where
-  fmap f (Get  m g)          = Get  m      (f . g)
-  fmap f (Post m body g)     = Post m body (f . g)
-  fmap f (Concurrently ms g) = Concurrently ms (f . g)
+  fmap f (Get  m g)      = Get  m      (f . g)
+  fmap f (Post m body g) = Post m body (f . g)
+  fmap f (Conc ms g)     = Conc ms     (f . g)
+  fmap f (IO a)          = IO (fmap f a)
   {-# INLINE fmap #-}
 
 
+-- | List 'JenkinsF' term to the 'Jenkins' language
+liftJ :: JenkinsF a -> Jenkins a
+liftJ = Jenkins . liftF
+{-# INLINE liftJ #-}
+
+
+-- | @GET@ query
 get :: Method Complete f -> Jenkins BL.ByteString
-get m = Jenkins . liftF $ Get m id
+get m = liftJ $ Get m id
+{-# INLINE get #-}
 
+-- | @POST@ query (and payload)
 post :: (forall f. Method Complete f) -> BL.ByteString -> Jenkins ()
-post m body = Jenkins . liftF $ Post m body (\_ -> ())
+post m body = liftJ $ Post m body (\_ -> ())
+{-# INLINE post #-}
 
+-- | Do a list of queries 'concurrently'
 concurrently :: [Jenkins a] -> Jenkins [a]
-concurrently js = Jenkins . liftF $ Concurrently js id
+concurrently js = liftJ $ Conc js id
+{-# INLINE concurrently #-}
+
+-- | Lift arbitrary 'IO' action
+io :: IO a -> Jenkins a
+io = liftIO
+{-# INLINE io #-}
 
 
 type Host     = String
@@ -106,8 +128,11 @@ interpret manager request = iterM go . unJenkins where
                 else Just . toException $ StatusCodeException s hs cookie_jar
     bs <- httpLbs request' manager
     next (responseBody bs)
-  go (Concurrently js next) = do
+  go (Conc js next) = do
     xs <- liftWith (\run ->
            mapConcurrently (run . interpret manager request) js)
     ys <- mapM (restoreT . return) xs
     next ys
+  go (IO action) = do
+    next <- liftIO action
+    next
