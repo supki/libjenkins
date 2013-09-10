@@ -9,7 +9,7 @@ import           Control.Concurrent.Async (mapConcurrently)
 import           Control.Exception (try, toException)
 import           Control.Lens
 import           Control.Applicative (Applicative(..))
-import           Control.Monad.Free
+import           Control.Monad.Free.Church (F, iterM, liftF)
 import           Control.Monad.Trans.Control (liftWith, restoreT)
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString as B
@@ -29,7 +29,7 @@ import           Jenkins.REST.Method
 {-# ANN module ("HLint: Use const" :: String) #-}
 
 
-newtype Jenkins a = Jenkins { unJenkins :: Free JenkinsF a }
+newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
 
 instance Functor Jenkins where
   fmap f = Jenkins . fmap f . unJenkins
