@@ -10,11 +10,12 @@ build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >= 1.10
 
-executable jenkins-failed-jobs
+executable jenkins-jobs
   default-language:  Haskell2010
-  main-is:           Failed.hs
+  main-is:           Jobs.hs
   build-depends:
-      base
+      ansi-terminal
+    , base
     , bytestring
     , lens
     , lens-aeson
