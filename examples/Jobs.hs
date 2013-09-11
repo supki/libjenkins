@@ -41,14 +41,14 @@ main = do
   -- get jobs names from jenkins "root" API
   colorized_jobs (Options { .. }) =
     jenkins url port user password $ do
-      res <- get ("" `as` json)
+      res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
       let jobs = res ^.. key "jobs"._Array.each.key "name"._String
       concurrently (map colorize jobs)
 
   -- get jobs colors as they appear on web UI
   colorize :: Text -> Jenkins Job
   colorize name = do
-    res <- get ("job" -/- text name `as` json)
+    res <- get ("job" -/- text name `as` json -?- "tree" -=- "color")
     return . Job name $ case res ^? key "color" of
       -- but sane
       Just "red"  -> Red

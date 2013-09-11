@@ -11,7 +11,7 @@ module Jenkins.REST.Method
   ( -- * Types
     Method, Type(..), Format, As
     -- * User interface helpers
-  , text, (?), (-/-), (-=-), (-&-), as, json, xml, python, query
+  , text, (-?-), (-/-), (-=-), (-&-), as, json, xml, python, query
     -- * Rendering
   , render, slash
   ) where
@@ -27,7 +27,7 @@ import           Data.Text (Text)
 -- >>> :set -XOverloadedStrings
 
 
-infix  1 :~?, ?
+infix  1 :~?, -?-
 infix  3 :~@, `as`
 infix  7 :~=, -=-
 infixr 5 :~/, -/-, :~&, -&-
@@ -103,8 +103,8 @@ python :: As Python
 python = AsPython
 
 -- | Append path and query
-(?) :: Method Complete f -> Method Query f -> Method Complete f
-(?) = (:~?)
+(-?-) :: Method Complete f -> Method Query f -> Method Complete f
+(-?-) = (:~?)
 
 -- | list-to-query combinator
 --
