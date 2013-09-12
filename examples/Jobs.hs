@@ -10,6 +10,7 @@ import           Data.Text (Text)                     -- text
 import qualified Data.Text.IO as T                    -- text
 import           Jenkins.REST                         -- libjenkins
 import           Jenkins.REST.Method hiding (render)  -- libjenkins
+import           Network.HTTP.Conduit (HttpException) -- http-conduit
 import           Options.Applicative                  -- optparse-applicative
 import           System.Console.ANSI                  -- ansi-terminal
 import           System.Exit (exitFailure)            -- base
@@ -37,30 +38,31 @@ main = do
     Left  e  -> do
       print e
       exitFailure
- where
-  -- get jobs names from jenkins "root" API
-  colorized_jobs (Options { .. }) =
-    jenkins url port user password $ do
-      res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
-      let jobs = res ^.. key "jobs"._Array.each.key "name"._String
-      concurrently (map colorize jobs)
 
-  -- get jobs colors as they appear on web UI
-  colorize :: Text -> Jenkins Job
-  colorize name = do
-    res <- get ("job" -/- text name `as` json -?- "tree" -=- "color")
-    return . Job name $ case res ^? key "color" of
-      -- but sane
-      Just "red"  -> Red
-      Just "blue" -> Green
-      _           -> Yellow
+-- get jobs names from jenkins "root" API
+colorized_jobs :: Options -> IO (Either HttpException [Job])
+colorized_jobs (Options { .. }) =
+  jenkins url port user password $ do
+    res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
+    let jobs = res ^.. key "jobs"._Array.each.key "name"._String
+    concurrently (map colorize jobs)
 
-  -- render colored job (assumes ANSI terminal)
-  render :: Job -> IO ()
-  render Job { .. } = do
-    setSGR [SetColor Foreground Dull color]
-    T.putStrLn name
-    setSGR []
+-- get jobs colors as they appear on web UI
+colorize :: Text -> Jenkins Job
+colorize name = do
+  res <- get ("job" -/- text name `as` json -?- "tree" -=- "color")
+  return . Job name $ case res ^? key "color" of
+    -- but sane
+    Just "red"  -> Red
+    Just "blue" -> Green
+    _           -> Yellow
+
+-- render colored job (assumes ANSI terminal)
+render :: Job -> IO ()
+render Job { .. } = do
+  setSGR [SetColor Foreground Dull color]
+  T.putStrLn name
+  setSGR []
 
 
 -- | Program options

@@ -17,6 +17,7 @@ executable jenkins-jobs
       ansi-terminal
     , base
     , bytestring
+    , http-conduit
     , lens
     , lens-aeson
     , libjenkins
