@@ -4,7 +4,8 @@
 {-# LANGUAGE RankNTypes #-}
 module Jenkins.REST
   ( module Jenkins.REST
-  , L.requestHeaders
+  , module Jenkins.REST.Lens
+  , module Jenkins.REST.Method
   ) where
 
 import           Control.Concurrent.Async (mapConcurrently)
@@ -27,9 +28,10 @@ import           Network.HTTP.Conduit
   )
 import           Network.HTTP.Types
   (Status(..))
-import qualified Network.HTTP.Conduit.Lens as L
 
 import           Jenkins.REST.Method
+import qualified Jenkins.REST.Lens
+import           Jenkins.REST.Lens as L
 
 {-# ANN module ("HLint: Use const" :: String) #-}
 

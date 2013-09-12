@@ -1,5 +1,5 @@
 -- | Lenses for 'Network.HTTP.Conduit' types
-module Network.HTTP.Conduit.Lens
+module Jenkins.REST.Lens
   ( -- * 'Request' lenses
     method, secure
   , host, port

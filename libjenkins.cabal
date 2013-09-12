@@ -20,9 +20,8 @@ library
   hs-source-dirs:    src
   exposed-modules:
     Jenkins.REST
+    Jenkins.REST.Lens
     Jenkins.REST.Method
-  other-modules:
-    Network.HTTP.Conduit.Lens
   build-depends:
       async         >= 2.0  && < 2.1
     , base          >= 4.6  && < 4.7

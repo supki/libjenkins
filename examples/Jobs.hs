@@ -8,8 +8,7 @@ import           Control.Lens.Aeson                   -- lens-aeson
 import qualified Data.ByteString.Char8 as B           -- bytestring
 import           Data.Text (Text)                     -- text
 import qualified Data.Text.IO as T                    -- text
-import           Jenkins.REST                         -- libjenkins
-import           Jenkins.REST.Method hiding (render)  -- libjenkins
+import           Jenkins.REST hiding (render)         -- libjenkins
 import           Network.HTTP.Conduit (HttpException) -- http-conduit
 import           Options.Applicative                  -- optparse-applicative
 import           System.Console.ANSI                  -- ansi-terminal
@@ -42,7 +41,7 @@ main = do
 -- get jobs names from jenkins "root" API
 colorized_jobs :: Options -> IO (Either HttpException [Job])
 colorized_jobs (Options { .. }) =
-  jenkins url port user password $ do
+  jenkins _url _port _user _password $ do
     res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
     let jobs = res ^.. key "jobs"._Array.each.key "name"._String
     concurrently (map colorize jobs)
@@ -67,10 +66,10 @@ render Job { .. } = do
 
 -- | Program options
 data Options = Options
-  { url      :: String
-  , port     :: Int
-  , user     :: B.ByteString
-  , password :: B.ByteString
+  { _url      :: String
+  , _port     :: Int
+  , _user     :: B.ByteString
+  , _password :: B.ByteString
   }
 
 -- | Quite a trivial options parser

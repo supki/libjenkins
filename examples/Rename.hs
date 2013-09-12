@@ -13,7 +13,6 @@ import           Data.Text (Text)                     -- text
 import qualified Data.Text as T                       -- text
 import qualified Data.Text.IO as T                    -- text
 import           Jenkins.REST                         -- libjenkins
-import           Jenkins.REST.Method hiding (render)  -- libjenkins
 import           Network.HTTP.Conduit (HttpException) -- http-conduit
 import           Options.Applicative                  -- optparse-applicative
 import           System.Exit (exitFailure)            -- base
@@ -41,15 +40,15 @@ main = do
 
 -- | Prompt to rename all jobs matching pattern
 rename :: Options -> IO (Either HttpException ())
-rename (Options { .. }) = jenkins url port user password $ do
+rename (Options { .. }) = jenkins _url _port _user _password $ do
   -- get jobs names from jenkins "root" API
   res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String
   for_ jobs rename_job
  where
   rename_job :: Text -> Jenkins ()
-  rename_job job = when (old `T.isInfixOf` job) $ do
-    let job' = (old `T.replace` new) job
+  rename_job job = when (_old `T.isInfixOf` job) $ do
+    let job' = (_old `T.replace` _new) job
     -- prompt for every matching job
     yes <- prompt $ T.unwords ["Rename", job, "to", job', "? [y/n]"]
     when yes $
@@ -72,12 +71,12 @@ rename (Options { .. }) = jenkins url port user password $ do
 
 -- | Program options
 data Options = Options
-  { url      :: String
-  , port     :: Int
-  , user     :: B.ByteString
-  , password :: B.ByteString
-  , old      :: Text
-  , new      :: Text
+  { _url      :: String
+  , _port     :: Int
+  , _user     :: B.ByteString
+  , _password :: B.ByteString
+  , _old      :: Text
+  , _new      :: Text
   }
 
 -- | Quite a trivial options parser
