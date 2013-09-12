@@ -34,3 +34,11 @@ executable jenkins-rename
     , libjenkins
     , optparse-applicative
     , text
+
+executable jenkins-discover
+  default-language:  Haskell2010
+  main-is:           Discover.hs
+  build-depends:
+      base
+    , libjenkins
+    , text
