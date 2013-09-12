@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | Show jobs status
 module Main where
@@ -38,12 +38,11 @@ main = do
       exitFailure
 
 -- get jobs names from jenkins "root" API
-colorized_jobs :: Options -> IO (Either SomeException [Job])
-colorized_jobs (Options { .. }) =
-  jenkins _url _port _user _password $ do
-    res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
-    let jobs = res ^.. key "jobs"._Array.each.key "name"._String
-    concurrently (map colorize jobs)
+colorized_jobs :: Settings -> IO (Either SomeException [Job])
+colorized_jobs settings = jenkins settings $ do
+  res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
+  let jobs = res ^.. key "jobs"._Array.each.key "name"._String
+  concurrently (map colorize jobs)
 
 -- get jobs colors as they appear on web UI
 colorize :: Text -> Jenkins Job
@@ -57,26 +56,18 @@ colorize name = do
 
 -- render colored job (assumes ANSI terminal)
 render :: Job -> IO ()
-render Job { .. } = do
+render Job { name, color } = do
   setSGR [SetColor Foreground Dull color]
   T.putStrLn name
   setSGR []
 
 
--- | Program options
-data Options = Options
-  { _url      :: String
-  , _port     :: Int
-  , _user     :: B.ByteString
-  , _password :: B.ByteString
-  }
-
--- | Quite a trivial options parser
-options :: ParserInfo Options
+-- | Quite a trivial jenkins settings parser
+options :: ParserInfo Settings
 options = info (helper <*> parser) fullDesc
  where
-  parser = Options
-    <$> strOption (long "host" <> short 'h')
-    <*> option (long "port" <> short 'p')
-    <*> nullOption (reader (return . B.pack) <> long "user" <> short 'u')
-    <*> nullOption (reader (return . B.pack) <> long "token" <> short 't')
+  parser = Settings
+    <$> strOption (long "host")
+    <*> option (long "port")
+    <*> nullOption (reader (return . B.pack) <> long "user")
+    <*> nullOption (reader (return . B.pack) <> long "token")

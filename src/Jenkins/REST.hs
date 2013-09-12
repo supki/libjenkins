@@ -121,27 +121,32 @@ type Password = B.ByteString
 type APIToken = B.ByteString
 
 
+-- | Jenkins settings
+data Settings = Settings Host Port User APIToken
+  deriving (Show)
+
+
 -- | Communicate with Jenkins REST API. Catches all exceptions.
-jenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either SomeException a)
-jenkins h p user password jenk = try . withManager $ \manager -> do
-  request <- liftIO $ parseUrl h
-  let request' = request
+jenkins :: Settings -> Jenkins a -> IO (Either SomeException a)
+jenkins (Settings h p u t) jenk = try . withManager $ \manager -> do
+  req <- liftIO $ parseUrl h
+  let req' = req
         & L.port            .~ p
         & L.responseTimeout .~ Just (20 * 1000000)
-  runReaderT (runIO manager jenk) (applyBasicAuth user password request')
+  runReaderT (runIO manager jenk) (applyBasicAuth u t req')
 
 runIO :: Manager -> Jenkins a -> ReaderT (Request (ResourceT IO)) (ResourceT IO) a
 runIO manager = iterM go . unJenkins where
   go (Get m next) = do
-    request <- ask
-    let request' = request
+    req <- ask
+    let req' = req
           & L.path   %~ (`slash` render m)
           & L.method .~ "GET"
-    bs <- lift $ httpLbs request' manager
+    bs <- lift $ httpLbs req' manager
     next (responseBody bs)
   go (Post m body next) = do
-    request <- ask
-    let request' = request
+    req <- ask
+    let req' = req
           & L.path          %~ (`slash` render m)
           & L.method        .~ "POST"
           & L.requestBody   .~ RequestBodyLBS body
@@ -150,8 +155,8 @@ runIO manager = iterM go . unJenkins where
             if 200 <= st && st < 400
                 then Nothing
                 else Just . toException $ StatusCodeException s hs cookie_jar
-    bs <- lift $ httpLbs request' manager
-    next (responseBody bs)
+    res <- lift $ httpLbs req' manager
+    next (responseBody res)
   go (Conc js next) = do
     xs <- liftWith $ \run ->
            liftWith $ \run' ->

@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | Rename jobs matching supplied pattern
 module Main where
@@ -39,15 +39,15 @@ main = do
 
 -- | Prompt to rename all jobs matching pattern
 rename :: Options -> IO (Either SomeException ())
-rename (Options { .. }) = jenkins _url _port _user _password $ do
+rename (Options { settings, old, new }) = jenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String
   for_ jobs rename_job
  where
   rename_job :: Text -> Jenkins ()
-  rename_job job = when (_old `T.isInfixOf` job) $ do
-    let job' = (_old `T.replace` _new) job
+  rename_job job = when (old `T.isInfixOf` job) $ do
+    let job' = (old `T.replace` new) job
     -- prompt for every matching job
     yes <- prompt $ T.unwords ["Rename", job, "to", job', "? [y/n]"]
     when yes $
@@ -70,12 +70,9 @@ rename (Options { .. }) = jenkins _url _port _user _password $ do
 
 -- | Program options
 data Options = Options
-  { _url      :: String
-  , _port     :: Int
-  , _user     :: B.ByteString
-  , _password :: B.ByteString
-  , _old      :: Text
-  , _new      :: Text
+  { settings :: Settings
+  , old      :: Text
+  , new      :: Text
   }
 
 -- | Quite a trivial options parser
@@ -83,9 +80,12 @@ options :: ParserInfo Options
 options = info (helper <*> parser) fullDesc
  where
   parser = Options
+    <$> parse_settings
+    <*> nullOption (reader (return . T.pack) <> long "old")
+    <*> nullOption (reader (return . T.pack) <> long "new")
+
+  parse_settings = Settings
     <$> strOption (long "host")
     <*> option (long "port")
     <*> nullOption (reader (return . B.pack) <> long "user")
     <*> nullOption (reader (return . B.pack) <> long "token")
-    <*> nullOption (reader (return . T.pack) <> long "old")
-    <*> nullOption (reader (return . T.pack) <> long "new")
