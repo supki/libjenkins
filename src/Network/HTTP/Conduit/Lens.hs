@@ -3,7 +3,7 @@ module Network.HTTP.Conduit.Lens
   ( -- * 'Request' lenses
     method, secure
   , host, port
-  , path, queryString, requestBody
+  , path, queryString, requestBody, requestHeaders
   , redirectCount, checkStatus, responseTimeout
   ) where
 
@@ -38,6 +38,9 @@ queryString f req = (\qs' -> req { H.queryString = qs' }) <$> f (H.queryString r
 
 requestBody :: Lens' (H.Request m) (H.RequestBody m)
 requestBody f req = (\rb' -> req { H.requestBody = rb' }) <$> f (H.requestBody req)
+
+requestHeaders :: Lens' (H.Request m) H.RequestHeaders
+requestHeaders f req = (\rh' -> req { H.requestHeaders = rh' }) <$> f (H.requestHeaders req)
 
 -- | How many redirects to follow when getting a resource. 0 means follow no redirects. Default value: 10.
 redirectCount :: Lens' (H.Request m) Int

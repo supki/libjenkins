@@ -2,7 +2,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-module Jenkins.REST where
+module Jenkins.REST
+  ( module Jenkins.REST
+  , L.requestHeaders
+  ) where
 
 import           Control.Concurrent.Async (mapConcurrently)
 import           Control.Exception (try, toException)
@@ -11,9 +14,12 @@ import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free.Church (F, iterM, liftF)
 import           Control.Monad.Trans.Control (liftWith, restoreT)
 import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Trans.Class (lift)
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
+import           Data.Monoid (mempty)
 import           Network.HTTP.Conduit
   ( Manager, Request, RequestBody(..), HttpException
   , withManager, applyBasicAuth, httpLbs, parseUrl, responseBody
@@ -56,12 +62,14 @@ data JenkinsF a where
   Post :: (forall f. Method Complete f) -> BL.ByteString -> (BL.ByteString -> a) -> JenkinsF a
   Conc :: [Jenkins b] -> ([b] -> a) -> JenkinsF a
   IO   :: IO a -> JenkinsF a
+  With :: (forall m. Request m -> Request m) -> Jenkins b -> (b -> a) -> JenkinsF a
 
 instance Functor JenkinsF where
   fmap f (Get  m g)      = Get  m      (f . g)
   fmap f (Post m body g) = Post m body (f . g)
   fmap f (Conc ms g)     = Conc ms     (f . g)
   fmap f (IO a)          = IO (fmap f a)
+  fmap f (With h j g)    = With h j    (f . g)
   {-# INLINE fmap #-}
 
 
@@ -76,10 +84,15 @@ get :: Method Complete f -> Jenkins BL.ByteString
 get m = liftJ $ Get m id
 {-# INLINE get #-}
 
--- | @POST@ query (and payload)
+-- | @POST@ query (with payload)
 post :: (forall f. Method Complete f) -> BL.ByteString -> Jenkins ()
 post m body = liftJ $ Post m body (\_ -> ())
 {-# INLINE post #-}
+
+-- | @POST@ query (without payload)
+post_ :: (forall f. Method Complete f) -> Jenkins ()
+post_ m = post m mempty
+{-# INLINE post_ #-}
 
 -- | Do a list of queries 'concurrently'
 concurrently :: [Jenkins a] -> Jenkins [a]
@@ -90,6 +103,11 @@ concurrently js = liftJ $ Conc js id
 io :: IO a -> Jenkins a
 io = liftIO
 {-# INLINE io #-}
+
+-- | Make custom local changes to 'Request'
+with :: (forall m. Request m -> Request m) -> Jenkins a -> Jenkins a
+with f j = liftJ $ With f j id
+{-# INLINE with #-}
 
 
 type Host     = String
@@ -107,17 +125,19 @@ jenkins h p user password jenk = try . withManager $ \manager -> do
   let request' = request
         & L.port            .~ p
         & L.responseTimeout .~ Just (20 * 1000000)
-  runIO manager (applyBasicAuth user password request') jenk
+  runReaderT (runIO manager jenk) (applyBasicAuth user password request')
 
-runIO :: Manager -> Request (ResourceT IO) -> Jenkins a -> ResourceT IO a
-runIO manager request = iterM go . unJenkins where
+runIO :: Manager -> Jenkins a -> ReaderT (Request (ResourceT IO)) (ResourceT IO) a
+runIO manager = iterM go . unJenkins where
   go (Get m next) = do
+    request <- ask
     let request' = request
           & L.path   %~ (`slash` render m)
           & L.method .~ "GET"
-    bs <- httpLbs request' manager
+    bs <- lift $ httpLbs request' manager
     next (responseBody bs)
   go (Post m body next) = do
+    request <- ask
     let request' = request
           & L.path          %~ (`slash` render m)
           & L.method        .~ "POST"
@@ -127,13 +147,17 @@ runIO manager request = iterM go . unJenkins where
             if 200 <= st && st < 400
                 then Nothing
                 else Just . toException $ StatusCodeException s hs cookie_jar
-    bs <- httpLbs request' manager
+    bs <- lift $ httpLbs request' manager
     next (responseBody bs)
   go (Conc js next) = do
     xs <- liftWith (\run ->
-           mapConcurrently (run . runIO manager request) js)
-    ys <- mapM (restoreT . return) xs
+           (liftWith (\run' ->
+             mapConcurrently (run' . run . runIO manager) js)))
+    ys <- mapM (restoreT . restoreT . return) xs
     next ys
   go (IO action) = do
     next <- liftIO action
     next
+  go (With f j next) = do
+    res <- local f (runIO manager j)
+    next res
