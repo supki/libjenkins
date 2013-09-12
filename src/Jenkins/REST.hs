@@ -6,10 +6,12 @@ module Jenkins.REST
   ( module Jenkins.REST
   , module Jenkins.REST.Lens
   , module Jenkins.REST.Method
+  , Request
+  , SomeException
   ) where
 
 import           Control.Concurrent.Async (mapConcurrently)
-import           Control.Exception (try, toException)
+import           Control.Exception (SomeException, try, toException)
 import           Control.Lens
 import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free.Church (F, iterM, liftF)
@@ -22,7 +24,7 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
 import           Data.Monoid (mempty)
 import           Network.HTTP.Conduit
-  ( Manager, Request, RequestBody(..), HttpException
+  ( Manager, Request, RequestBody(..)
   , withManager, applyBasicAuth, httpLbs, parseUrl, responseBody
   , HttpException(..)
   )
@@ -119,9 +121,8 @@ type Password = B.ByteString
 type APIToken = B.ByteString
 
 
--- | Communicate with Jenkins REST API. Only catches exceptions from @http-conduit@ package;
--- does not catch exceptions from lifted arbitrary 'IO' actions
-jenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either HttpException a)
+-- | Communicate with Jenkins REST API. Catches all exceptions.
+jenkins :: Host -> Port -> User -> Password -> Jenkins a -> IO (Either SomeException a)
 jenkins h p user password jenk = try . withManager $ \manager -> do
   request <- liftIO $ parseUrl h
   let request' = request
@@ -152,9 +153,9 @@ runIO manager = iterM go . unJenkins where
     bs <- lift $ httpLbs request' manager
     next (responseBody bs)
   go (Conc js next) = do
-    xs <- liftWith (\run ->
-           (liftWith (\run' ->
-             mapConcurrently (run' . run . runIO manager) js)))
+    xs <- liftWith $ \run ->
+           liftWith $ \run' ->
+             mapConcurrently (run' . run . runIO manager) js
     ys <- mapM (restoreT . restoreT . return) xs
     next ys
   go (IO action) = do

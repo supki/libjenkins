@@ -17,7 +17,18 @@ executable jenkins-jobs
       ansi-terminal
     , base
     , bytestring
-    , http-conduit
+    , lens
+    , lens-aeson
+    , libjenkins
+    , optparse-applicative
+    , text
+
+executable jenkins-rename
+  default-language:  Haskell2010
+  main-is:           Rename.hs
+  build-depends:
+      base
+    , bytestring
     , lens
     , lens-aeson
     , libjenkins

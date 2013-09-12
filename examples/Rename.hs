@@ -1,21 +1,20 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE OverloadedStrings #-}
--- | Show jobs status
+-- | Rename jobs matching supplied pattern
 module Main where
 
-import           Control.Lens                         -- lens
-import           Control.Lens.Aeson                   -- lens-aeson
-import           Control.Monad (when)                 -- base
-import qualified Data.ByteString.Char8 as B           -- bytestring
-import           Data.Foldable (for_)                 -- base
-import           Data.Function (fix)                  -- base
-import           Data.Text (Text)                     -- text
-import qualified Data.Text as T                       -- text
-import qualified Data.Text.IO as T                    -- text
-import           Jenkins.REST                         -- libjenkins
-import           Network.HTTP.Conduit (HttpException) -- http-conduit
-import           Options.Applicative                  -- optparse-applicative
-import           System.Exit (exitFailure)            -- base
+import           Control.Lens               -- lens
+import           Control.Lens.Aeson         -- lens-aeson
+import           Control.Monad (when)       -- base
+import qualified Data.ByteString.Char8 as B -- bytestring
+import           Data.Foldable (for_)       -- base
+import           Data.Function (fix)        -- base
+import           Data.Text (Text)           -- text
+import qualified Data.Text as T             -- text
+import qualified Data.Text.IO as T          -- text
+import           Jenkins.REST               -- libjenkins
+import           Options.Applicative        -- optparse-applicative
+import           System.Exit (exitFailure)  -- base
 
 {-# ANN module ("HLint: Use camelCase" :: String) #-}
 
@@ -39,7 +38,7 @@ main = do
       exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Either HttpException ())
+rename :: Options -> IO (Either SomeException ())
 rename (Options { .. }) = jenkins _url _port _user _password $ do
   -- get jobs names from jenkins "root" API
   res <- get ("" `as` json -?- "tree" -=- "jobs[name]")

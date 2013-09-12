@@ -3,16 +3,15 @@
 -- | Show jobs status
 module Main where
 
-import           Control.Lens                         -- lens
-import           Control.Lens.Aeson                   -- lens-aeson
-import qualified Data.ByteString.Char8 as B           -- bytestring
-import           Data.Text (Text)                     -- text
-import qualified Data.Text.IO as T                    -- text
-import           Jenkins.REST hiding (render)         -- libjenkins
-import           Network.HTTP.Conduit (HttpException) -- http-conduit
-import           Options.Applicative                  -- optparse-applicative
-import           System.Console.ANSI                  -- ansi-terminal
-import           System.Exit (exitFailure)            -- base
+import           Control.Lens                 -- lens
+import           Control.Lens.Aeson           -- lens-aeson
+import qualified Data.ByteString.Char8 as B   -- bytestring
+import           Data.Text (Text)             -- text
+import qualified Data.Text.IO as T            -- text
+import           Jenkins.REST hiding (render) -- libjenkins
+import           Options.Applicative          -- optparse-applicative
+import           System.Console.ANSI          -- ansi-terminal
+import           System.Exit (exitFailure)    -- base
 
 {-# ANN module ("HLint: Use camelCase" :: String) #-}
 
@@ -39,7 +38,7 @@ main = do
       exitFailure
 
 -- get jobs names from jenkins "root" API
-colorized_jobs :: Options -> IO (Either HttpException [Job])
+colorized_jobs :: Options -> IO (Either SomeException [Job])
 colorized_jobs (Options { .. }) =
   jenkins _url _port _user _password $ do
     res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
