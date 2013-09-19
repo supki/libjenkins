@@ -32,6 +32,7 @@ library
     , base          >= 4.6  && < 4.7
     , bytestring    >= 0.10 && < 0.11
     , conduit       >= 1.0  && < 1.1
+    , data-default  >= 0.5  && < 0.6
     , free          >= 3.4  && < 3.5
     , http-conduit  >= 1.9  && < 1.10
     , http-types    >= 0.8  && < 0.9

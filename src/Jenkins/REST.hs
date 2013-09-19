@@ -22,6 +22,7 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
+import           Data.Default (def)
 import           Data.Monoid (mempty)
 import           Network.HTTP.Conduit
   ( Manager, Request, RequestBody(..)
@@ -30,6 +31,7 @@ import           Network.HTTP.Conduit
   )
 import           Network.HTTP.Types
   (Status(..))
+import           Text.XML (Document, renderLBS)
 
 import           Jenkins.REST.Method
 import qualified Jenkins.REST.Lens
@@ -92,6 +94,12 @@ get m = liftJ $ Get m id
 post :: (forall f. Method Complete f) -> BL.ByteString -> Jenkins ()
 post m body = liftJ $ Post m body (\_ -> ())
 {-# INLINE post #-}
+
+-- | Convenience function that @POST@s job's @config.xml@ (in @xml-conduit@ format)
+postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
+postXML m =
+  with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
+{-# INLINE postXML #-}
 
 -- | @POST@ query (without payload)
 post_ :: (forall f. Method Complete f) -> Jenkins ()
