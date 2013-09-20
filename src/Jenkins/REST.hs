@@ -23,7 +23,7 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
-import           Data.Default (def)
+import           Data.Default (Default(..))
 import           Data.Monoid (mempty)
 import           Network.HTTP.Conduit
   ( Manager, Request, RequestBody(..)
@@ -150,6 +150,14 @@ data Settings = Settings
   , _jenkins_user      :: User
   , _jenkins_api_token :: APIToken
   }  deriving (Show)
+
+instance Default Settings where
+  def = Settings
+    { _jenkins_host      = "http://example.com"
+    , _jenkins_port      = 80
+    , _jenkins_user      = "anonymous"
+    , _jenkins_api_token = "secret"
+    }
 
 makeLenses ''Settings
 
