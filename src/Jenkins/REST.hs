@@ -95,12 +95,6 @@ post :: (forall f. Method Complete f) -> BL.ByteString -> Jenkins ()
 post m body = liftJ $ Post m body (\_ -> ())
 {-# INLINE post #-}
 
--- | Convenience function that @POST@s job's @config.xml@ (in @xml-conduit@ format)
-postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
-postXML m =
-  with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
-{-# INLINE postXML #-}
-
 -- | @POST@ query (without payload)
 post_ :: (forall f. Method Complete f) -> Jenkins ()
 post_ m = post m mempty
@@ -120,6 +114,25 @@ io = liftIO
 with :: (forall m. Request m -> Request m) -> Jenkins a -> Jenkins a
 with f j = liftJ $ With f j id
 {-# INLINE with #-}
+
+
+-- * Convenience
+
+-- | @POST@ job's @config.xml@ (in @xml-conduit@ format)
+postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
+postXML m =
+  with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
+{-# INLINE postXML #-}
+
+-- | Reload jenkins configuration from disk
+reload :: Jenkins ()
+reload = post_ "reload"
+{-# INLINE reload #-}
+
+-- | Restart jenkins
+restart :: Jenkins ()
+restart = post_ "restart"
+{-# INLINE restart #-}
 
 
 type Host     = String
