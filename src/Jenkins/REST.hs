@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Jenkins.REST
   ( module Jenkins.REST
   , module Jenkins.REST.Lens
@@ -143,8 +144,14 @@ type APIToken = B.ByteString
 
 
 -- | Jenkins settings
-data Settings = Settings Host Port User APIToken
-  deriving (Show)
+data Settings = Settings
+  { _jenkins_host      :: Host
+  , _jenkins_port      :: Port
+  , _jenkins_user      :: User
+  , _jenkins_api_token :: APIToken
+  }  deriving (Show)
+
+makeLenses ''Settings
 
 
 -- | Communicate with Jenkins REST API. Catches all exceptions.
