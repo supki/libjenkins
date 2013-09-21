@@ -9,11 +9,7 @@ import Test.DocTest (doctest)
 
 
 main :: IO ()
-main = do
-  files <- sources "src"
-  doctest (sandbox:files)
- where
-  sandbox = "-package-db=.cabal-sandbox/x86_64-linux-ghc-7.6.2-packages.conf.d"
+main = sources "src" >>= doctest
 
 sources :: FilePath -> IO [FilePath]
 sources root = do

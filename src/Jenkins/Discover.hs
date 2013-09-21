@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 -- | Discover Jenkins on the network
@@ -75,7 +76,7 @@ readAnswer s = fst <$> B.recvFrom s 4096
 -- </hudson>
 -- @
 parse :: ByteString -> Maybe Discover
-parse (X.parseLBS X.def . BL.fromStrict -> bs) = case bs of
+parse (X.parseLBS X.def . fromStrict -> bs) = case bs of
   Left  _      -> Nothing
   Right parsed ->
     let v = parsed^?deeper.X.el "version".content
@@ -85,3 +86,10 @@ parse (X.parseLBS X.def . BL.fromStrict -> bs) = case bs of
  where
   content = X.nodes.traverse.X._Content
   deeper  = X.root.X.nodes.traverse.X._Element
+
+fromStrict :: ByteString -> BL.ByteString
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 706)
+fromStrict = BL.fromStrict
+#else
+fromStrict = BL.fromChunks . pure
+#endif

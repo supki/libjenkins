@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -17,6 +18,9 @@ module Jenkins.REST.Method
   ) where
 
 import           Data.ByteString (ByteString)
+#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ < 706)
+import           Data.ByteString.Char8 ()
+#endif
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.String (IsString(..))
 import qualified Data.Text as T
@@ -129,13 +133,13 @@ query xs = foldr1 (:~&) (map (uncurry (:~=)) xs)
 -- >>> render (text "restart")
 -- "restart"
 --
--- >>> render ("job" ? "name" -=- "foo" -&- "title" -=- "bar")
+-- >>> render ("job" -?- "name" -=- "foo" -&- "title" -=- "bar")
 -- "job?name=foo&title=bar"
 --
--- >>> render ("job" ? "name" -&- "title" -=- "bar")
+-- >>> render ("job" -?- "name" -&- "title" -=- "bar")
 -- "job?name&title=bar"
 --
--- >>> render ("job" -/- 7 `as` json ? "name" -&- "title" -=- "bar")
+-- >>> render ("job" -/- 7 `as` json -?- "name" -&- "title" -=- "bar")
 -- "job/7/api/json?name&title=bar"
 render :: Method t f -> ByteString
 render Empty            = ""
