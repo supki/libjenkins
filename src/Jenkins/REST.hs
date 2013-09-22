@@ -162,9 +162,18 @@ instance Default Settings where
 makeLenses ''Settings
 
 
--- | Communicate with Jenkins REST API. Catches all exceptions.
+-- | Communicate with Jenkins REST API
+--
+-- Catches all exceptions.
 jenkins :: Settings -> Jenkins a -> IO (Either SomeException a)
-jenkins (Settings h p u t) jenk = try . withManager $ \manager -> do
+jenkins settings = try . jenkinsExc settings
+
+-- | Communicate with Jenkins REST API
+--
+-- Throws 'HttpException' and also all exceptions that could be thrown
+-- by embedded 'IO' actions.
+jenkinsExc :: Settings -> Jenkins a -> IO a
+jenkinsExc (Settings h p u t) jenk = withManager $ \manager -> do
   req <- liftIO $ parseUrl h
   let req' = req
         & L.port            .~ p
