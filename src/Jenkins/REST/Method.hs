@@ -12,7 +12,8 @@ module Jenkins.REST.Method
   ( -- * Types
     Method, Type(..), Format, As
     -- * User interface helpers
-  , text, (-?-), (-/-), (-=-), (-&-), as, json, xml, python, query
+  , text, (-?-), (-/-), (-=-), (-&-), query
+  , as, JSONy(..), XMLy(..), Pythony(..)
     -- * Rendering
   , render, slash
   ) where
@@ -21,6 +22,7 @@ import           Data.ByteString (ByteString)
 #if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ < 706)
 import           Data.ByteString.Char8 ()
 #endif
+import qualified Data.ByteString as B
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.String (IsString(..))
 import qualified Data.Text as T
@@ -95,16 +97,34 @@ as :: Method Complete f -> As f -> Method Complete f
 as = (:~@)
 
 -- | JSON response format
-json :: As JSON
-json = AsJSON
+class JSONy t where
+  json :: t JSON
+
+instance JSONy As where
+  json = AsJSON
+
+instance t ~ Complete => JSONy (Method t) where
+  json = "" `as` json
 
 -- | XML response format
-xml :: As XML
-xml = AsXML
+class XMLy t where
+  xml :: t XML
+
+instance XMLy As where
+  xml = AsXML
+
+instance t ~ Complete => XMLy (Method t) where
+  xml = "" `as` xml
 
 -- | Python response format
-python :: As Python
-python = AsPython
+class Pythony t where
+  python :: t Python
+
+instance Pythony As where
+  python = AsPython
+
+instance t ~ Complete => Pythony (Method t) where
+  python = "" `as` python
 
 -- | Append path and query
 (-?-) :: Method Complete f -> Method Query f -> Method Complete f
@@ -123,6 +143,15 @@ query xs = foldr1 (:~&) (map (uncurry (:~=)) xs)
 
 
 -- | Render 'Method' to something that can be sent over the wire
+--
+-- >>> render ("" `as` xml)
+-- "api/xml"
+--
+-- >>> render xml
+-- "api/xml"
+--
+-- >>> render ("job" -/- 7 `as` xml)
+-- "job/7/api/xml"
 --
 -- >>> render ("job" -/- 7 `as` xml)
 -- "job/7/api/xml"
@@ -145,13 +174,19 @@ render :: Method t f -> ByteString
 render Empty            = ""
 render (Text s)         = T.encodeUtf8 s
 render (x :~/ y)        = render x `slash` render y
-render (x :~@ AsJSON)   = render x `slash` "api" `slash` "json"
-render (x :~@ AsXML)    = render x `slash` "api" `slash` "xml"
-render (x :~@ AsPython) = render x `slash` "api" `slash` "python"
+render (x :~@ f)        =
+  let prefix  = render x
+      postfix = renderFormat f
+  in if B.null prefix then  "api" `slash` postfix else prefix `slash` "api" `slash` postfix
 render (x :~= Just y)   = T.encodeUtf8 x `equals` T.encodeUtf8 y
 render (x :~= Nothing)  = T.encodeUtf8 x
 render (x :~& y)        = render x `ampersand` render y
 render (x :~? y)        = render x `question` render y
+
+renderFormat :: IsString s => As f -> s
+renderFormat AsJSON   = "json"
+renderFormat AsXML    = "xml"
+renderFormat AsPython = "python"
 
 -- | Insert \"\/\" between two 'String'-like things and concat them.
 slash :: (IsString m, Monoid m) => m -> m -> m

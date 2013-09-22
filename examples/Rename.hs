@@ -41,7 +41,7 @@ main = do
 rename :: Options -> IO (Either SomeException ())
 rename (Options { settings, old, new }) = jenkins settings $ do
   -- get jobs names from jenkins "root" API
-  res <- get ("" `as` json -?- "tree" -=- "jobs[name]")
+  res <- get (json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String
   for_ jobs rename_job
  where
