@@ -194,6 +194,12 @@ renderFormat AsPython = "python"
 
 -- | Render unicode text as query string
 --
+-- >>> renderText "foo-bar-baz"
+-- "foo-bar-baz"
+--
+-- >>> renderText "foo bar baz"
+-- "foo%20bar%20baz"
+--
 -- >>> renderText "ДМИТРИЙ МАЛИКОВ"
 -- "%D0%94%D0%9C%D0%98%D0%A2%D0%A0%D0%98%D0%99%20%D0%9C%D0%90%D0%9B%D0%98%D0%9A%D0%9E%D0%92"
 renderText :: Text -> ByteString
