@@ -28,6 +28,7 @@ import           Data.String (IsString(..))
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Text (Text)
+import           Network.URI (escapeURIChar, isUnreserved)
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -170,16 +171,19 @@ query xs = foldr1 (:~&) (map (uncurry (:~=)) xs)
 --
 -- >>> render ("job" -/- 7 `as` json -?- "name" -&- "title" -=- "bar")
 -- "job/7/api/json?name&title=bar"
+--
+-- >>> render ("job" -/- "ДМИТРИЙ" `as` xml)
+-- "job/%D0%94%D0%9C%D0%98%D0%A2%D0%A0%D0%98%D0%99/api/xml"
 render :: Method t f -> ByteString
 render Empty            = ""
-render (Text s)         = T.encodeUtf8 s
+render (Text s)         = renderText s
 render (x :~/ y)        = render x `slash` render y
 render (x :~@ f)        =
   let prefix  = render x
       postfix = renderFormat f
   in if B.null prefix then  "api" `slash` postfix else prefix `slash` "api" `slash` postfix
-render (x :~= Just y)   = T.encodeUtf8 x `equals` T.encodeUtf8 y
-render (x :~= Nothing)  = T.encodeUtf8 x
+render (x :~= Just y)   = renderText x `equals` renderText y
+render (x :~= Nothing)  = renderText x
 render (x :~& y)        = render x `ampersand` render y
 render (x :~? y)        = render x `question` render y
 
@@ -187,6 +191,13 @@ renderFormat :: IsString s => As f -> s
 renderFormat AsJSON   = "json"
 renderFormat AsXML    = "xml"
 renderFormat AsPython = "python"
+
+-- | Render unicode text as query string
+--
+-- >>> renderText "ДМИТРИЙ МАЛИКОВ"
+-- "%D0%94%D0%9C%D0%98%D0%A2%D0%A0%D0%98%D0%99%20%D0%9C%D0%90%D0%9B%D0%98%D0%9A%D0%9E%D0%92"
+renderText :: Text -> ByteString
+renderText = T.encodeUtf8 . T.concatMap (T.pack . escapeURIChar isUnreserved)
 
 -- | Insert \"\/\" between two 'String'-like things and concat them.
 slash :: (IsString m, Monoid m) => m -> m -> m
