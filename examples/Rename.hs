@@ -51,12 +51,8 @@ rename (Options { settings, old, new }) = jenkins settings $ do
     -- prompt for every matching job
     yes <- prompt $ T.unwords ["Rename", job, "to", job', "? [y/n]"]
     when yes $
-      -- if user agrees
-      with (requestHeaders <>~ [("Content-Type", "text/xml")]) $ do
-        -- copy the job
-        get   ("createItem" -?- "name" -=- job' -&- "mode" -=- "copy" -&- "from" -=- job)
-        -- delete the old one
-        post_ ("job" -/- text job -/- "doDelete")
+      -- if user agrees then voodoo comes
+      post_ ("job" -/- text job -/- "doRename" -?- "newName" -=- job')
 
   -- asks user until she enters 'y' or 'n'
   prompt message = io . fix $ \loop -> do
