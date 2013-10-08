@@ -39,7 +39,7 @@ main = do
 
 -- get jobs names from jenkins "root" API
 colorized_jobs :: Settings -> IO (Either SomeException [Job])
-colorized_jobs settings = jenkins settings $ do
+colorized_jobs settings = tryRunJenkins settings $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String
   concurrently (map colorize jobs)

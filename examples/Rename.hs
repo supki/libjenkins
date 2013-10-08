@@ -39,7 +39,7 @@ main = do
 
 -- | Prompt to rename all jobs matching pattern
 rename :: Options -> IO (Either SomeException ())
-rename (Options { settings, old, new }) = jenkins settings $ do
+rename (Options { settings, old, new }) = tryRunJenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get (json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String

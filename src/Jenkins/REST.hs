@@ -12,7 +12,7 @@ module Jenkins.REST
   ) where
 
 import           Control.Concurrent.Async (mapConcurrently)
-import           Control.Exception (SomeException, try, toException)
+import           Control.Exception (Exception, SomeException, try, toException)
 import           Control.Lens
 import           Control.Applicative (Applicative(..))
 import           Control.Monad.Free.Church (F, iterM, liftF)
@@ -144,12 +144,15 @@ type APIToken = B.ByteString
 
 
 -- | Jenkins settings
+--
+-- '_jenkins_api_token' might as well be user's password, Jenkins
+-- does not make any distinction between these concepts
 data Settings = Settings
   { _jenkins_host      :: Host
   , _jenkins_port      :: Port
   , _jenkins_user      :: User
   , _jenkins_api_token :: APIToken
-  }  deriving (Show)
+  }  deriving (Show, Eq)
 
 instance Default Settings where
   def = Settings
@@ -164,24 +167,47 @@ makeLenses ''Settings
 
 -- | Communicate with Jenkins REST API
 --
--- Catches all exceptions.
-jenkins :: Settings -> Jenkins a -> IO (Either SomeException a)
-jenkins settings = try . jenkinsExc settings
-
--- | Communicate with Jenkins REST API
---
 -- Throws 'HttpException' and also all exceptions that could be thrown
 -- by embedded 'IO' actions.
-jenkinsExc :: Settings -> Jenkins a -> IO a
-jenkinsExc (Settings h p u t) jenk = withManager $ \manager -> do
+runJenkins :: Settings -> Jenkins a -> IO a
+runJenkins (Settings h p u t) jenk = withManager $ \manager -> do
   req <- liftIO $ parseUrl h
   let req' = req
         & L.port            .~ p
         & L.responseTimeout .~ Just (20 * 1000000)
-  runReaderT (runIO manager jenk) (applyBasicAuth u t req')
+  runReaderT (runJenkinsIO manager jenk) (applyBasicAuth u t req')
 
-runIO :: Manager -> Jenkins a -> ReaderT (Request (ResourceT IO)) (ResourceT IO) a
-runIO manager = iterM go . unJenkins where
+-- | Communicate with Jenkins REST API
+--
+-- Catches specified exceptions from API calls and embedded 'IO' actions
+--
+-- @
+-- tryRunJenkins settings ≡ try settings . runJenkins
+-- @
+tryRunJenkins :: Exception e => Settings -> Jenkins a -> IO (Either e a)
+tryRunJenkins settings = try . runJenkins settings
+
+-- | /Pure/ communication with Jenkins REST API
+--
+-- Obviously, It may not communicate with any Jenkins instance,
+-- since you can choose 'Identity' for 'm'
+--
+-- Nevertheless, it's useful for testing purposes and as a building
+-- block for 'runJenkins'
+runJenkinsP :: Monad m => (JenkinsF (m a) -> m a) -> Jenkins a -> m a
+runJenkinsP go = iterM go . unJenkins
+
+runJenkinsIO
+  :: Manager
+  -> Jenkins a
+  -> ReaderT (Request (ResourceT IO)) (ResourceT IO) a
+runJenkinsIO manager = runJenkinsP (jenkinsIO manager)
+
+jenkinsIO
+  :: Manager
+  -> JenkinsF (ReaderT (Request (ResourceT IO)) (ResourceT IO) a)
+  -> ReaderT (Request (ResourceT IO)) (ResourceT IO) a
+jenkinsIO manager = go where
   go (Get m next) = do
     req <- ask
     let req' = req
@@ -202,15 +228,15 @@ runIO manager = iterM go . unJenkins where
                 else Just . toException $ StatusCodeException s hs cookie_jar
     res <- lift $ httpLbs req' manager
     next (responseBody res)
-  go (Conc js next) = do
+  go (Conc jenks next) = do
     xs <- liftWith $ \run ->
            liftWith $ \run' ->
-             mapConcurrently (run' . run . runIO manager) js
+             mapConcurrently (run' . run . runJenkinsIO manager) jenks
     ys <- mapM (restoreT . restoreT . return) xs
     next ys
   go (IO action) = do
     next <- liftIO action
     next
-  go (With f j next) = do
-    res <- local f (runIO manager j)
+  go (With f jenk next) = do
+    res <- local f (runJenkinsIO manager jenk)
     next res
