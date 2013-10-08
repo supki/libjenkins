@@ -19,12 +19,6 @@ import           System.Exit (exitFailure)  -- base
 {-# ANN module ("HLint: Use camelCase" :: String) #-}
 
 
--- | Job name and status
-data Job = Job
-  { name  :: Text
-  }
-
-
 main :: IO ()
 main = do
   -- more useful help on error
