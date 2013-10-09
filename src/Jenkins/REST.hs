@@ -127,13 +127,6 @@ restart = post_ "restart"
 {-# INLINE restart #-}
 
 
-type Host     = String
-type Port     = Int
-type User     = B.ByteString
-type Password = B.ByteString
-type APIToken = B.ByteString
-
-
 -- | Jenkins settings
 --
 -- '_jenkins_api_token' might as well be user's password, Jenkins
@@ -153,6 +146,20 @@ instance Default Settings where
     , _jenkins_api_token = "secret"
     }
 
+newtype Host = Host { unHost :: String }
+  deriving (Show, Eq, Typeable, Data, Generic, IsString)
+
+newtype Port = Port { unPort :: Int }
+  deriving (Show, Eq, Typeable, Data, Generic, Num)
+
+newtype User = User { unUser :: B.ByteString }
+  deriving (Show, Eq, Typeable, Data, Generic, IsString)
+
+newtype APIToken = APIToken { unAPIToken :: B.ByteString }
+  deriving (Show, Eq, Typeable, Data, Generic, IsString)
+
+type Password = APIToken
+
 makeLenses ''Settings
 
 
@@ -161,7 +168,7 @@ makeLenses ''Settings
 -- Throws 'HttpException' and also all exceptions that could be thrown
 -- by embedded 'IO' actions.
 runJenkins :: Settings -> Jenkins a -> IO a
-runJenkins (Settings h p u t) jenk = withManager $ \manager -> do
+runJenkins (Settings (Host h) (Port p) (User u) (APIToken t)) jenk = withManager $ \manager -> do
   req <- liftIO $ parseUrl h
   let req' = req
         & L.port            .~ p
