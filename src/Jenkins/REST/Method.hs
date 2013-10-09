@@ -1,5 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -23,11 +25,13 @@ import           Data.ByteString (ByteString)
 import           Data.ByteString.Char8 ()
 #endif
 import qualified Data.ByteString as B
+import           Data.Data (Data, Typeable)
 import           Data.Monoid (Monoid(..), (<>))
 import           Data.String (IsString(..))
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import           Data.Text (Text)
+import           GHC.Generics (Generic)
 import           Network.URI (escapeURIChar, isUnreserved)
 
 -- $setup
@@ -66,9 +70,11 @@ instance IsString (Method Query f) where
 
 -- | Method types
 data Type = Query | Complete
+  deriving (Show, Eq, Typeable, Data, Generic)
 
 -- | Response formats
 data Format = JSON | XML | Python
+  deriving (Show, Eq, Typeable, Data, Generic)
 
 -- | Response format singleton type
 data As :: Format -> * where
@@ -77,6 +83,7 @@ data As :: Format -> * where
   AsPython :: As Python
 
 deriving instance Show (As f)
+deriving instance Eq (As f)
 
 text :: Text -> Method Complete f
 text = Text

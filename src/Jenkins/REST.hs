@@ -1,5 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -23,8 +26,11 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
+import           Data.Data (Data, Typeable)
 import           Data.Default (Default(..))
 import           Data.Monoid (mempty)
+import           Data.String (IsString)
+import           GHC.Generics (Generic)
 import           Network.HTTP.Conduit
   ( Manager, Request, RequestBody(..)
   , withManager, applyBasicAuth, httpLbs, parseUrl, responseBody
@@ -42,22 +48,7 @@ import           Jenkins.REST.Lens as L
 
 
 newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
-
-instance Functor Jenkins where
-  fmap f = Jenkins . fmap f . unJenkins
-  {-# INLINE fmap #-}
-
-instance Applicative Jenkins where
-  pure = Jenkins . pure
-  {-# INLINE pure #-}
-  Jenkins f <*> Jenkins x = Jenkins (f <*> x)
-  {-# INLINE (<*>) #-}
-
-instance Monad Jenkins where
-  return = pure
-  {-# INLINE return #-}
-  Jenkins x >>= k = Jenkins (x >>= unJenkins . k)
-  {-# INLINE (>>=) #-}
+  deriving (Functor, Applicative, Monad)
 
 instance MonadIO Jenkins where
   liftIO = liftJ . IO
@@ -152,7 +143,7 @@ data Settings = Settings
   , _jenkins_port      :: Port
   , _jenkins_user      :: User
   , _jenkins_api_token :: APIToken
-  }  deriving (Show, Eq)
+  } deriving (Show, Eq, Typeable, Data, Generic)
 
 instance Default Settings where
   def = Settings
