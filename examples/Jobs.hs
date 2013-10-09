@@ -67,7 +67,7 @@ options :: ParserInfo Settings
 options = info (helper <*> parser) fullDesc
  where
   parser = Settings
-    <$> strOption (long "host")
-    <*> option (long "port")
-    <*> nullOption (reader (return . B.pack) <> long "user")
-    <*> nullOption (reader (return . B.pack) <> long "token")
+    <$> (Host <$> strOption (long "host"))
+    <*> (Port <$> option (long "port"))
+    <*> (User . B.pack <$> strOption (long "user"))
+    <*> (APIToken . B.pack <$> strOption (long "token" <> long "password"))
