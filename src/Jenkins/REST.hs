@@ -161,6 +161,13 @@ newtype APIToken = APIToken { unAPIToken :: B.ByteString }
 type Password = APIToken
 
 makeLenses ''Settings
+makePrisms ''Host
+makePrisms ''Port
+makePrisms ''User
+makePrisms ''APIToken
+
+_Password :: Prism' Password B.ByteString
+_Password = _APIToken
 
 
 -- | Communicate with Jenkins REST API
