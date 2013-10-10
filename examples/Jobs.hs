@@ -3,15 +3,16 @@
 -- | Show jobs status
 module Main where
 
-import           Control.Lens                 -- lens
-import           Control.Lens.Aeson           -- lens-aeson
-import qualified Data.ByteString.Char8 as B   -- bytestring
-import           Data.Text (Text)             -- text
-import qualified Data.Text.IO as T            -- text
-import           Jenkins.REST hiding (render) -- libjenkins
-import           Options.Applicative          -- optparse-applicative
-import           System.Console.ANSI          -- ansi-terminal
-import           System.Exit (exitFailure)    -- base
+import           Control.Exception (SomeException) -- base
+import           Control.Lens                      -- lens
+import           Control.Lens.Aeson                -- lens-aeson
+import qualified Data.ByteString.Char8 as B        -- bytestring
+import           Data.Text (Text)                  -- text
+import qualified Data.Text.IO as T                 -- text
+import           Jenkins.REST hiding (render)      -- libjenkins
+import           Options.Applicative               -- optparse-applicative
+import           System.Console.ANSI               -- ansi-terminal
+import           System.Exit (exitFailure)         -- base
 
 {-# ANN module ("HLint: Use camelCase" :: String) #-}
 

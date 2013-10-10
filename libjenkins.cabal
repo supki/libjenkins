@@ -25,6 +25,7 @@ library
   exposed-modules:
     Jenkins.Discover
     Jenkins.REST
+    Jenkins.REST.Internal
     Jenkins.REST.Lens
     Jenkins.REST.Method
   build-depends:
