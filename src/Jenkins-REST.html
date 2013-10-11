@@ -164,36 +164,39 @@
 <a name="line-155"></a>
 <a name="line-156"></a><a name="jenkins_password"></a><span class='hs-definition'>jenkins_password</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Lens'</span> <span class='hs-conid'>Settings</span> <span class='hs-conid'>Password</span>
 <a name="line-157"></a><span class='hs-definition'>jenkins_password</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>jenkins_api_token</span>
-<a name="line-158"></a>
-<a name="line-159"></a><a name="makePrisms"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Host</span>
-<a name="line-160"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Port</span>
-<a name="line-161"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>User</span>
-<a name="line-162"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>APIToken</span>
-<a name="line-163"></a>
-<a name="line-164"></a><span class='hs-sel'>_Password</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Prism'</span> <span class='hs-conid'>Password</span> <span class='hs-conid'>B</span><span class='hs-varop'>.</span><span class='hs-conid'>ByteString</span>
-<a name="line-165"></a><span class='hs-sel'>_Password</span> <span class='hs-keyglyph'>=</span> <span class='hs-sel'>_APIToken</span>
-<a name="line-166"></a>
-<a name="line-167"></a>
-<a name="line-168"></a><a name="runJenkins"></a><span class='hs-comment'>-- | Communicate with Jenkins REST API</span>
-<a name="line-169"></a><span class='hs-comment'>--</span>
-<a name="line-170"></a><span class='hs-comment'>-- Throws 'HttpException' and also all exceptions that could be thrown</span>
-<a name="line-171"></a><span class='hs-comment'>-- by embedded 'IO' actions.</span>
-<a name="line-172"></a><span class='hs-definition'>runJenkins</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Settings</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span>
-<a name="line-173"></a><span class='hs-definition'>runJenkins</span> <span class='hs-layout'>(</span><span class='hs-conid'>Settings</span> <span class='hs-layout'>(</span><span class='hs-conid'>Host</span> <span class='hs-varid'>h</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>Port</span> <span class='hs-varid'>p</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>User</span> <span class='hs-varid'>u</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>APIToken</span> <span class='hs-varid'>t</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-varid'>jenk</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>withManager</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>manager</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>do</span>
-<a name="line-174"></a>  <span class='hs-varid'>req</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>liftIO</span> <span class='hs-varop'>$</span> <span class='hs-varid'>parseUrl</span> <span class='hs-varid'>h</span>
-<a name="line-175"></a>  <span class='hs-keyword'>let</span> <span class='hs-varid'>req'</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>req</span>
-<a name="line-176"></a>        <span class='hs-varop'>&amp;</span> <span class='hs-conid'>L</span><span class='hs-varop'>.</span><span class='hs-varid'>port</span>            <span class='hs-varop'>.~</span> <span class='hs-varid'>p</span>
-<a name="line-177"></a>        <span class='hs-varop'>&amp;</span> <span class='hs-conid'>L</span><span class='hs-varop'>.</span><span class='hs-varid'>responseTimeout</span> <span class='hs-varop'>.~</span> <span class='hs-conid'>Just</span> <span class='hs-layout'>(</span><span class='hs-num'>20</span> <span class='hs-varop'>*</span> <span class='hs-num'>1000000</span><span class='hs-layout'>)</span>
-<a name="line-178"></a>  <span class='hs-varid'>runReaderT</span> <span class='hs-layout'>(</span><span class='hs-varid'>runJenkinsIO</span> <span class='hs-varid'>manager</span> <span class='hs-varid'>jenk</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-varid'>applyBasicAuth</span> <span class='hs-varid'>u</span> <span class='hs-varid'>t</span> <span class='hs-varid'>req'</span><span class='hs-layout'>)</span>
-<a name="line-179"></a>
-<a name="line-180"></a><a name="tryRunJenkins"></a><span class='hs-comment'>-- | Communicate with Jenkins REST API</span>
-<a name="line-181"></a><span class='hs-comment'>--</span>
-<a name="line-182"></a><span class='hs-comment'>-- Catches specified exceptions from API calls and embedded 'IO' actions</span>
+<a name="line-158"></a><span class='hs-comment'>{-# INLINE jenkins_password #-}</span>
+<a name="line-159"></a>
+<a name="line-160"></a><a name="makePrisms"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Host</span>
+<a name="line-161"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>Port</span>
+<a name="line-162"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>User</span>
+<a name="line-163"></a><span class='hs-definition'>makePrisms</span> <span class='hs-chr'>'</span><span class='hs-chr'>'</span><span class='hs-conid'>APIToken</span>
+<a name="line-164"></a>
+<a name="line-165"></a><span class='hs-sel'>_Password</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Prism'</span> <span class='hs-conid'>Password</span> <span class='hs-conid'>B</span><span class='hs-varop'>.</span><span class='hs-conid'>ByteString</span>
+<a name="line-166"></a><span class='hs-sel'>_Password</span> <span class='hs-keyglyph'>=</span> <span class='hs-sel'>_APIToken</span>
+<a name="line-167"></a><span class='hs-comment'>{-# INLINE _Password #-}</span>
+<a name="line-168"></a>
+<a name="line-169"></a>
+<a name="line-170"></a><a name="runJenkins"></a><span class='hs-comment'>-- | Communicate with Jenkins REST API</span>
+<a name="line-171"></a><span class='hs-comment'>--</span>
+<a name="line-172"></a><span class='hs-comment'>-- Throws 'HttpException' and also all exceptions that could be thrown</span>
+<a name="line-173"></a><span class='hs-comment'>-- by embedded 'IO' actions.</span>
+<a name="line-174"></a><span class='hs-definition'>runJenkins</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Settings</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span>
+<a name="line-175"></a><span class='hs-definition'>runJenkins</span> <span class='hs-layout'>(</span><span class='hs-conid'>Settings</span> <span class='hs-layout'>(</span><span class='hs-conid'>Host</span> <span class='hs-varid'>h</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>Port</span> <span class='hs-varid'>p</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>User</span> <span class='hs-varid'>u</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-conid'>APIToken</span> <span class='hs-varid'>t</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span> <span class='hs-varid'>jenk</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>withManager</span> <span class='hs-varop'>$</span> <span class='hs-keyglyph'>\</span><span class='hs-varid'>manager</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyword'>do</span>
+<a name="line-176"></a>  <span class='hs-varid'>req</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>liftIO</span> <span class='hs-varop'>$</span> <span class='hs-varid'>parseUrl</span> <span class='hs-varid'>h</span>
+<a name="line-177"></a>  <span class='hs-keyword'>let</span> <span class='hs-varid'>req'</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>req</span>
+<a name="line-178"></a>        <span class='hs-varop'>&amp;</span> <span class='hs-conid'>L</span><span class='hs-varop'>.</span><span class='hs-varid'>port</span>            <span class='hs-varop'>.~</span> <span class='hs-varid'>p</span>
+<a name="line-179"></a>        <span class='hs-varop'>&amp;</span> <span class='hs-conid'>L</span><span class='hs-varop'>.</span><span class='hs-varid'>responseTimeout</span> <span class='hs-varop'>.~</span> <span class='hs-conid'>Just</span> <span class='hs-layout'>(</span><span class='hs-num'>20</span> <span class='hs-varop'>*</span> <span class='hs-num'>1000000</span><span class='hs-layout'>)</span>
+<a name="line-180"></a>  <span class='hs-varid'>runReaderT</span> <span class='hs-layout'>(</span><span class='hs-varid'>runJenkinsIO</span> <span class='hs-varid'>manager</span> <span class='hs-varid'>jenk</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-varid'>applyBasicAuth</span> <span class='hs-varid'>u</span> <span class='hs-varid'>t</span> <span class='hs-varid'>req'</span><span class='hs-layout'>)</span>
+<a name="line-181"></a>
+<a name="line-182"></a><a name="tryRunJenkins"></a><span class='hs-comment'>-- | Communicate with Jenkins REST API</span>
 <a name="line-183"></a><span class='hs-comment'>--</span>
-<a name="line-184"></a><span class='hs-comment'>-- @</span>
-<a name="line-185"></a><span class='hs-comment'>-- tryRunJenkins settings ≡ try settings . runJenkins</span>
+<a name="line-184"></a><span class='hs-comment'>-- Catches specified exceptions from API calls and embedded 'IO' actions</span>
+<a name="line-185"></a><span class='hs-comment'>--</span>
 <a name="line-186"></a><span class='hs-comment'>-- @</span>
-<a name="line-187"></a><span class='hs-definition'>tryRunJenkins</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Exception</span> <span class='hs-varid'>e</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Settings</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-layout'>(</span><span class='hs-conid'>Either</span> <span class='hs-varid'>e</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span>
-<a name="line-188"></a><span class='hs-definition'>tryRunJenkins</span> <span class='hs-varid'>settings</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>try</span> <span class='hs-varop'>.</span> <span class='hs-varid'>runJenkins</span> <span class='hs-varid'>settings</span>
+<a name="line-187"></a><span class='hs-comment'>-- tryRunJenkins settings ≡ try settings . runJenkins</span>
+<a name="line-188"></a><span class='hs-comment'>-- @</span>
+<a name="line-189"></a><span class='hs-definition'>tryRunJenkins</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Exception</span> <span class='hs-varid'>e</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-conid'>Settings</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>IO</span> <span class='hs-layout'>(</span><span class='hs-conid'>Either</span> <span class='hs-varid'>e</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span>
+<a name="line-190"></a><span class='hs-definition'>tryRunJenkins</span> <span class='hs-varid'>settings</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>try</span> <span class='hs-varop'>.</span> <span class='hs-varid'>runJenkins</span> <span class='hs-varid'>settings</span>
+<a name="line-191"></a><span class='hs-comment'>{-# INLINE tryRunJenkins #-}</span>
 </pre></body>
 </html>
