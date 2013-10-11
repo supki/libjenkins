@@ -1,12 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NoMonoLocalBinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 module Jenkins.REST.Internal where
 
 import           Control.Applicative (Applicative(..))
-import           Control.Concurrent.Async (mapConcurrently)
+import           Control.Concurrent.Async (concurrently)
 import           Control.Exception (toException)
 import           Control.Lens
 import           Control.Monad (join)
@@ -36,14 +37,14 @@ instance MonadIO Jenkins where
 data JenkinsF a where
   Get  :: Method Complete f -> (BL.ByteString -> a) -> JenkinsF a
   Post :: (forall f. Method Complete f) -> BL.ByteString -> (BL.ByteString -> a) -> JenkinsF a
-  Conc :: [Jenkins b] -> ([b] -> a) -> JenkinsF a
+  Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
   IO   :: IO a -> JenkinsF a
   With :: (forall m. Request m -> Request m) -> Jenkins b -> (b -> a) -> JenkinsF a
 
 instance Functor JenkinsF where
   fmap f (Get  m g)      = Get  m      (f . g)
   fmap f (Post m body g) = Post m body (f . g)
-  fmap f (Conc ms g)     = Conc ms     (f . g)
+  fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
   fmap f (IO a)          = IO (fmap f a)
   fmap f (With h j g)    = With h j    (f . g)
   {-# INLINE fmap #-}
@@ -95,12 +96,12 @@ jenkinsIO manager = go where
                 else Just . toException $ StatusCodeException s hs cookie_jar
     res <- lift $ httpLbs req' manager
     next (responseBody res)
-  go (Conc jenks next) = do
-    xs <- liftWith $ \run ->
-           liftWith $ \run' ->
-             mapConcurrently (run' . run . runJenkinsIO manager) jenks
-    ys <- mapM (restoreT . restoreT . return) xs
-    next ys
+  go (Conc jenka jenkb next) = do
+    (a, b) <- liftWith $ \run' -> liftWith $ \run'' ->
+      let run = run'' . run' . runJenkinsIO manager in concurrently (run jenka) (run jenkb)
+    c <- restoreT . restoreT $ return a
+    d <- restoreT . restoreT $ return b
+    next c d
   go (IO action) = join (liftIO action)
   go (With f jenk next) = do
     res <- local f (runJenkinsIO manager jenk)

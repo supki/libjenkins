@@ -19,7 +19,7 @@ module Jenkins.REST
   , get, post, post_, concurrently, io, with
   , module Jenkins.REST.Method
     -- ** Little helpers
-  , postXML, reload, restart
+  , mapConcurrently, postXML, reload, restart
     -- * Jenkins queries execution
   , runJenkins, tryRunJenkins, runJenkinsP
     -- * Usable @http-conduit@ 'Request' type API
@@ -63,9 +63,9 @@ post_ :: (forall f. Method Complete f) -> Jenkins ()
 post_ m = post m mempty
 {-# INLINE post_ #-}
 
--- | Do a list of queries 'concurrently'
-concurrently :: [Jenkins a] -> Jenkins [a]
-concurrently js = liftJ $ Conc js id
+-- | Do both queries 'concurrently'
+concurrently :: Jenkins a -> Jenkins b -> Jenkins (a, b)
+concurrently ja jb = liftJ $ Conc ja jb (,)
 {-# INLINE concurrently #-}
 
 -- | Lift arbitrary 'IO' action
@@ -86,6 +86,15 @@ postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
 postXML m =
   with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
 {-# INLINE postXML #-}
+
+-- | Do a list of queries 'concurrently'
+mapConcurrently :: [Jenkins a] -> Jenkins [a]
+mapConcurrently = foldr go (return [])
+ where
+  go x xs = do
+    (y, ys) <- concurrently x xs
+    return (y : ys)
+{-# INLINE mapConcurrently #-}
 
 -- | Reload jenkins configuration from disk
 reload :: Jenkins ()
