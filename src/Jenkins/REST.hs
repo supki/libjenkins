@@ -19,7 +19,7 @@ module Jenkins.REST
   , get, post, post_, concurrently, io, with
   , module Jenkins.REST.Method
     -- ** Little helpers
-  , mapConcurrently, postXML, reload, restart
+  , concurrentlys, postXML, reload, restart
     -- * Jenkins queries execution
   , runJenkins, tryRunJenkins, runJenkinsP
     -- * Usable @http-conduit@ 'Request' type API
@@ -88,13 +88,13 @@ postXML m =
 {-# INLINE postXML #-}
 
 -- | Do a list of queries 'concurrently'
-mapConcurrently :: [Jenkins a] -> Jenkins [a]
-mapConcurrently = foldr go (return [])
+concurrentlys :: [Jenkins a] -> Jenkins [a]
+concurrentlys = foldr go (return [])
  where
   go x xs = do
     (y, ys) <- concurrently x xs
     return (y : ys)
-{-# INLINE mapConcurrently #-}
+{-# INLINE concurrentlys #-}
 
 -- | Reload jenkins configuration from disk
 reload :: Jenkins ()
