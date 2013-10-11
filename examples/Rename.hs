@@ -3,7 +3,6 @@
 -- | Rename jobs matching supplied pattern
 module Main where
 
-import           Control.Exception (SomeException) -- base
 import           Control.Lens                      -- lens
 import           Control.Lens.Aeson                -- lens-aeson
 import           Control.Monad (when)              -- base
@@ -33,8 +32,8 @@ main = do
       exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Either SomeException ())
-rename (Options { settings, old, new }) = tryRunJenkins settings $ do
+rename :: Options -> IO (Either Disconnect ())
+rename (Options { settings, old, new }) = runJenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get (json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String

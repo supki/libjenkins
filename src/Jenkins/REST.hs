@@ -9,27 +9,28 @@
 -- | Interface to Jenkins REST API
 module Jenkins.REST
   ( -- * Types
-    Jenkins
+    Jenkins, Disconnect(..)
   , Settings(..), Host(..), Port(..), User(..), APIToken(..), Password
   , Request
     -- ** Lenses and prisms
   , jenkins_host, jenkins_port, jenkins_user, jenkins_api_token, jenkins_password
   , _Host, _Port, _User, _APIToken, _Password
     -- * Jenkins queries construction
-  , get, post, post_, concurrently, io, with
+  , get, post, post_, concurrently, io, disconnect, with
   , module Jenkins.REST.Method
     -- ** Little helpers
   , concurrentlys, concurrentlys_, postXML, reload, restart
     -- * Jenkins queries execution
-  , runJenkins, tryRunJenkins, runJenkinsP
+  , runJenkins, runJenkinsP
     -- * Usable @http-conduit@ 'Request' type API
   , module Jenkins.REST.Lens
   ) where
 
 import           Control.Applicative ((<$))
-import           Control.Exception (Exception, try)
+import           Control.Exception (handle)
 import           Control.Lens
 import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -38,7 +39,7 @@ import           Data.Default (Default(..))
 import           Data.Monoid (mempty)
 import           Data.String (IsString)
 import           GHC.Generics (Generic)
-import           Network.HTTP.Conduit (Request, withManager, applyBasicAuth, parseUrl)
+import           Network.HTTP.Conduit (Request, HttpException, withManager, applyBasicAuth, parseUrl)
 import           Text.XML (Document, renderLBS)
 
 import           Jenkins.REST.Internal
@@ -74,6 +75,13 @@ io :: IO a -> Jenkins a
 io = liftIO
 {-# INLINE io #-}
 
+-- | Disconnect from Jenkins
+--
+-- Following queries won't be executed
+disconnect :: Jenkins a
+disconnect = liftJ Dcon
+{-# INLINE disconnect #-}
+
 -- | Make custom local changes to 'Request'
 with :: (forall m. Request m -> Request m) -> Jenkins a -> Jenkins a
 with f j = liftJ $ With f j id
@@ -97,19 +105,23 @@ concurrentlys = foldr go (return [])
     return (y : ys)
 {-# INLINE concurrentlys #-}
 
--- | Do a list of queries 'concurrently'
+-- | Do a list of queries 'concurrently' ignoring their results
 concurrentlys_ :: [Jenkins a] -> Jenkins ()
 concurrentlys_ = foldr (\x xs -> () <$ concurrently x xs) (return ())
 {-# INLINE concurrentlys_ #-}
 
 -- | Reload jenkins configuration from disk
-reload :: Jenkins ()
-reload = post_ "reload"
+reload :: Jenkins a
+reload = do
+  post_ "reload"
+  disconnect
 {-# INLINE reload #-}
 
 -- | Restart jenkins
-restart :: Jenkins ()
-restart = post_ "restart"
+restart :: Jenkins a
+restart = do
+  post_ "restart"
+  disconnect
 {-# INLINE restart #-}
 
 
@@ -167,25 +179,22 @@ _Password = _APIToken
 {-# INLINE _Password #-}
 
 
--- | Communicate with Jenkins REST API
---
--- Throws 'HttpException' and also all exceptions that could be thrown
--- by embedded 'IO' actions.
-runJenkins :: Settings -> Jenkins a -> IO a
-runJenkins (Settings (Host h) (Port p) (User u) (APIToken t)) jenk = withManager $ \manager -> do
-  req <- liftIO $ parseUrl h
-  let req' = req
-        & L.port            .~ p
-        & L.responseTimeout .~ Just (20 * 1000000)
-  runReaderT (runJenkinsIO manager jenk) (applyBasicAuth u t req')
+data Disconnect =
+    Disconnect
+  | JenkinsException HttpException
+    deriving (Show, Typeable, Generic)
 
 -- | Communicate with Jenkins REST API
 --
--- Catches specified exceptions from API calls and embedded 'IO' actions
---
--- @
--- tryRunJenkins settings ≡ try settings . runJenkins
--- @
-tryRunJenkins :: Exception e => Settings -> Jenkins a -> IO (Either e a)
-tryRunJenkins settings = try . runJenkins settings
-{-# INLINE tryRunJenkins #-}
+-- Catches 'HttpException's thrown by @http-conduit@, but
+-- does not catch exceptions thrown by embedded 'IO' actions
+runJenkins :: Settings -> Jenkins a -> IO (Either Disconnect a)
+runJenkins (Settings (Host h) (Port p) (User u) (APIToken t)) jenk =
+  handle (return . Left . JenkinsException) $
+    withManager $ \manager -> do
+      req <- liftIO $ parseUrl h
+      let req' = req
+            & L.port            .~ p
+            & L.responseTimeout .~ Just (20 * 1000000)
+      res <- runReaderT (runMaybeT (runJenkinsIO manager jenk)) (applyBasicAuth u t req')
+      return $ maybe (Left Disconnect) Right res

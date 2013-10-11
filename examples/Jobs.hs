@@ -3,7 +3,6 @@
 -- | Show jobs status
 module Main where
 
-import           Control.Exception (SomeException) -- base
 import           Control.Lens                      -- lens
 import           Control.Lens.Aeson                -- lens-aeson
 import qualified Data.ByteString.Char8 as B        -- bytestring
@@ -39,11 +38,11 @@ main = do
       exitFailure
 
 -- get jobs names from jenkins "root" API
-colorized_jobs :: Settings -> IO (Either SomeException [Job])
-colorized_jobs settings = tryRunJenkins settings $ do
+colorized_jobs :: Settings -> IO (Either Disconnect [Job])
+colorized_jobs settings = runJenkins settings $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String
-  concurrently (map colorize jobs)
+  concurrentlys (map colorize jobs)
 
 -- get jobs colors as they appear on web UI
 colorize :: Text -> Jenkins Job
