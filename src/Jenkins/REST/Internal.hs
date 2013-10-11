@@ -25,7 +25,7 @@ import           Jenkins.REST.Lens as L
 import           Jenkins.REST.Method
 
 
--- | Jenkins query EDSL abstract type
+-- | Jenkins REST API composable queries
 newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
   deriving (Functor, Applicative, Monad)
 
@@ -49,7 +49,7 @@ instance Functor JenkinsF where
   fmap f (With h j g)    = With h j    (f . g)
   {-# INLINE fmap #-}
 
--- | List 'JenkinsF' term to the 'Jenkins' language
+-- | Lift 'JenkinsF' query to the 'Jenkins' query language
 liftJ :: JenkinsF a -> Jenkins a
 liftJ = Jenkins . liftF
 {-# INLINE liftJ #-}
@@ -60,16 +60,14 @@ runJenkinsIO
   -> Jenkins a
   -> ReaderT (Request (ResourceT IO)) (ResourceT IO) a
 runJenkinsIO manager = runJenkinsP (jenkinsIO manager)
+{-# INLINE runJenkinsIO #-}
 
--- | Possibly /Pure/ communication with Jenkins REST API
+-- | Generic Jenkins REST API queries interpreter
 --
--- Obviously, It may not communicate with any Jenkins instance,
--- since you can choose 'Identity' for 'm'
---
--- Nevertheless, it's useful for testing purposes and as a building
--- block for 'runJenkins'
+-- Particularly useful for testing (with @m ≡ 'Identity'@)
 runJenkinsP :: Monad m => (JenkinsF (m a) -> m a) -> Jenkins a -> m a
 runJenkinsP go = iterM go . unJenkins
+{-# INLINE runJenkinsP #-}
 
 jenkinsIO
   :: Manager

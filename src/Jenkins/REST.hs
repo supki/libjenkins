@@ -155,6 +155,7 @@ makeLenses ''Settings
 
 jenkins_password :: Lens' Settings Password
 jenkins_password = jenkins_api_token
+{-# INLINE jenkins_password #-}
 
 makePrisms ''Host
 makePrisms ''Port
@@ -163,6 +164,7 @@ makePrisms ''APIToken
 
 _Password :: Prism' Password B.ByteString
 _Password = _APIToken
+{-# INLINE _Password #-}
 
 
 -- | Communicate with Jenkins REST API
@@ -186,3 +188,4 @@ runJenkins (Settings (Host h) (Port p) (User u) (APIToken t)) jenk = withManager
 -- @
 tryRunJenkins :: Exception e => Settings -> Jenkins a -> IO (Either e a)
 tryRunJenkins settings = try . runJenkins settings
+{-# INLINE tryRunJenkins #-}
