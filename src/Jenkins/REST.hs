@@ -19,13 +19,14 @@ module Jenkins.REST
   , get, post, post_, concurrently, io, with
   , module Jenkins.REST.Method
     -- ** Little helpers
-  , concurrentlys, postXML, reload, restart
+  , concurrentlys, concurrentlys_, postXML, reload, restart
     -- * Jenkins queries execution
   , runJenkins, tryRunJenkins, runJenkinsP
     -- * Usable @http-conduit@ 'Request' type API
   , module Jenkins.REST.Lens
   ) where
 
+import           Control.Applicative ((<$))
 import           Control.Exception (Exception, try)
 import           Control.Lens
 import           Control.Monad.IO.Class (MonadIO(..))
@@ -95,6 +96,11 @@ concurrentlys = foldr go (return [])
     (y, ys) <- concurrently x xs
     return (y : ys)
 {-# INLINE concurrentlys #-}
+
+-- | Do a list of queries 'concurrently'
+concurrentlys_ :: [Jenkins a] -> Jenkins ()
+concurrentlys_ = foldr (\x xs -> () <$ concurrently x xs) (return ())
+{-# INLINE concurrentlys_ #-}
 
 -- | Reload jenkins configuration from disk
 reload :: Jenkins ()
