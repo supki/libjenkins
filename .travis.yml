@@ -1,3 +1,24 @@
 language: haskell
+
+env:
+ - GHCVER=7.6.3
+ - GHCVER=head
+
+matrix:
+  allow_failures:
+   - env: GHCVER=head
+
+before_install:
+ - sudo add-apt-repository -y ppa:hvr/ghc
+ - sudo apt-get update
+ - sudo apt-get install cabal-install-1.18 ghc-$GHCVER
+ - export PATH=/opt/ghc/$GHCVER/bin:$PATH
+
 install:
-    - cabal install --only-dependencies --enable-tests --force-reinstalls
+ - cabal-1.18 update
+ - cabal-1.18 install --only-dependencies --enable-tests --force-reinstalls
+
+script:
+ - cabal-1.18 check
+ - cabal-1.18 install
+ - cabal-1.18 sdist
