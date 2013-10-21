@@ -47,7 +47,7 @@ colorized_jobs settings = runJenkins settings $ do
 -- get jobs colors as they appear on web UI
 colorize :: Text -> Jenkins Job
 colorize name = do
-  res <- get ("job" -/- text name `as` json -?- "tree" -=- "color")
+  res <- get (job name `as` json -?- "tree" -=- "color")
   return . Job name $ case res ^? key "color" of
     -- but sane
     Just "red"  -> Red

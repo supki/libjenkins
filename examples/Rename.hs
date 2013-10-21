@@ -40,13 +40,13 @@ rename (Options { settings, old, new }) = runJenkins settings $ do
   for_ jobs rename_job
  where
   rename_job :: Text -> Jenkins ()
-  rename_job job = when (old `T.isInfixOf` job) $ do
-    let job' = (old `T.replace` new) job
+  rename_job name = when (old `T.isInfixOf` name) $ do
+    let name' = (old `T.replace` new) name
     -- prompt for every matching job
-    yes <- prompt $ T.unwords ["Rename", job, "to", job', "? [y/n]"]
+    yes <- prompt $ T.unwords ["Rename", name, "to", name', "? [y/n]"]
     when yes $
       -- if user agrees then voodoo comes
-      post_ ("job" -/- text job -/- "doRename" -?- "newName" -=- job')
+      post_ (job name -/- "doRename" -?- "newName" -=- name')
 
   -- asks user until she enters 'y' or 'n'
   prompt message = io . fix $ \loop -> do
