@@ -9,13 +9,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
--- | Jenkins RESTful API methods construction
+-- | Jenkins REST API method construction
 module Jenkins.REST.Method
   ( -- * Types
     Method, Type(..), Format, As
-    -- * User interface helpers
-  , text, (-?-), (-/-), (-=-), (-&-), query
+    -- * Method construction
+  , text, int, (-?-), (-/-), (-=-), (-&-), query
   , as, JSONy(..), XMLy(..), Pythony(..)
+    -- ** Helpers
+  , job, build, view, queue
     -- * Rendering
   , render, slash
   ) where
@@ -85,8 +87,13 @@ data As :: Format -> * where
 deriving instance Show (As f)
 deriving instance Eq (As f)
 
+-- | Convert 'Text' to 'Method'
 text :: Text -> Method Complete f
 text = Text
+
+-- | Convert 'Integer' to 'Method'
+int :: Integer -> Method Complete f
+int = fromInteger
 
 -- | Append 2 paths
 (-/-) :: Method Complete f -> Method Complete f -> Method Complete f
@@ -240,3 +247,32 @@ question = insert "?"
 -- "foo?"
 insert :: (IsString m, Monoid m) => m -> m -> m -> m
 insert t x y = x <> t <> y
+
+
+-- | Job API method
+--
+-- >>> render (job "name" `as` json)
+-- "job/name/api/json"
+job :: Text -> Method Complete f
+job name = "job" -/- text name
+
+-- | Job build API method
+--
+-- >>> render (build "name" 4 `as` json)
+-- "job/name/4/api/json"
+build :: Integral a => Text -> a -> Method Complete f
+build name num = "job" -/- text name -/- int (toInteger num)
+
+-- | View API method
+--
+-- >>> render (view "name" `as` xml)
+-- "view/name/api/xml"
+view :: Text -> Method Complete f
+view name = "view" -/- text name
+
+-- | Queue API method
+--
+-- >>> render (queue `as` python)
+-- "queue/api/python"
+queue :: Method Complete f
+queue = "queue"

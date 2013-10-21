@@ -6,22 +6,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
--- | Interface to Jenkins REST API
+-- | Jenkins REST API interface
 module Jenkins.REST
   ( -- * Types
     Jenkins, Disconnect(..)
   , Settings(..), Host(..), Port(..), User(..), APIToken(..), Password
   , Request
-    -- ** Lenses and prisms
-  , jenkins_host, jenkins_port, jenkins_user, jenkins_api_token, jenkins_password
-  , _Host, _Port, _User, _APIToken, _Password
     -- * Jenkins queries construction
   , get, post, post_, concurrently, io, disconnect, with
+    -- ** Jenkins method construction
   , module Jenkins.REST.Method
     -- ** Little helpers
   , concurrentlys, concurrentlys_, postXML, reload, restart
     -- * Jenkins queries execution
   , runJenkins, runJenkinsP
+    -- ** Lenses and prisms
+  , jenkins_host, jenkins_port, jenkins_user, jenkins_api_token, jenkins_password
+  , _Host, _Port, _User, _APIToken, _Password
     -- * Usable @http-conduit@ 'Request' type API
   , module Jenkins.REST.Lens
   ) where
