@@ -1,4 +1,4 @@
 0.1.0.0
 =======
 
-Initial release. REST and Discovery API support.
+Initial release. REST and Discovery APIs support.

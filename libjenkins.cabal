@@ -1,7 +1,7 @@
 name:                libjenkins
 version:             0.1.0.0
 synopsis:            Jenkins API interface
-description:         Jenkins API interface what supports Jenkins REST API and Jenkins Discovery API
+description:         Jenkins API interface. It supports REST and Discovery APIs
 license:             BSD3
 license-file:        LICENSE
 author:              Matvey Aksenov
@@ -56,3 +56,8 @@ test-suite doctests
 source-repository head
   type:     git
   location: https://github.com/supki/libjenkins
+
+source-repository this
+  type:     git
+  location: https://github.com/supki/libjenkins
+  tag:      0.1.0.0
