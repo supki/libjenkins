@@ -84,7 +84,7 @@ disconnect = liftJ Dcon
 {-# INLINE disconnect #-}
 
 -- | Make custom local changes to 'Request'
-with :: (forall m. Request m -> Request m) -> Jenkins a -> Jenkins a
+with :: (Request -> Request) -> Jenkins a -> Jenkins a
 with f j = liftJ $ With f j id
 {-# INLINE with #-}
 

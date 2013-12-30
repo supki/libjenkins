@@ -42,7 +42,7 @@ data JenkinsF a where
   Post :: (forall f. Method Complete f) -> BL.ByteString -> (BL.ByteString -> a) -> JenkinsF a
   Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
   IO   :: IO a -> JenkinsF a
-  With :: (forall m. Request m -> Request m) -> Jenkins b -> (b -> a) -> JenkinsF a
+  With :: (Request -> Request) -> Jenkins b -> (b -> a) -> JenkinsF a
   Dcon :: JenkinsF a
 
 instance Functor JenkinsF where
@@ -63,7 +63,7 @@ liftJ = Jenkins . liftF
 runJenkinsIO
   :: Manager
   -> Jenkins a
-  -> MaybeT (ReaderT (Request (ResourceT IO)) (ResourceT IO)) a
+  -> MaybeT (ReaderT Request (ResourceT IO)) a
 runJenkinsIO manager = runJenkinsP (jenkinsIO manager)
 {-# INLINE runJenkinsIO #-}
 
@@ -76,8 +76,8 @@ runJenkinsP go = iterM go . unJenkins
 
 jenkinsIO
   :: Manager
-  -> JenkinsF (MaybeT (ReaderT (Request (ResourceT IO)) (ResourceT IO)) a)
-  -> MaybeT (ReaderT (Request (ResourceT IO)) (ResourceT IO)) a
+  -> JenkinsF (MaybeT (ReaderT Request (ResourceT IO)) a)
+  -> MaybeT (ReaderT Request (ResourceT IO)) a
 jenkinsIO manager = go where
   go (Get m next) = do
     req <- lift ask
@@ -101,7 +101,7 @@ jenkinsIO manager = go where
     next (responseBody res)
   go (Conc jenka jenkb next) = do
     (a, b) <- liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
-      let run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT (Request (ResourceT IO))) (StT MaybeT t)))
+      let run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
           run = run''' . run'' . run' . runJenkinsIO manager
       in concurrently (run jenka) (run jenkb)
     c <- restoreT . restoreT . restoreT $ return a
