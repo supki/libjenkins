@@ -1,8 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-name-shadowing #-}
--- | Show jobs descriptions
+-- | Concurrency benchmark
 --
--- Does all jobs API calls concurrently, otherwise is exactly like Sequential.hs
+-- The benchmark does the folllowing:
+--
+--   * it asks Jenkins instance for accessible jobs
+--
+--   * it sends queries to get jobs descriptions
+--
+--   * it prints all descriptions
+--
+-- The benchmark can be run sequentially or concurrently
+--
+-- See @bench/README.md@ for usage instructions
 module Main (main) where
 
 import           Control.Lens                 -- lens
@@ -35,8 +45,7 @@ main = do
 descriptions :: Aggregate Text (Maybe Text) -> Settings -> IO (Either Disconnect [Maybe Text])
 descriptions aggregate settings = runJenkins settings $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
-  let jobs = res ^.. key "jobs"._Array.each.key "name"._String
-  aggregate  describe jobs
+  aggregate describe (res ^.. key "jobs"._Array.each.key "name"._String)
 
 describe :: Text -> Jenkins (Maybe Text)
 describe name = do

@@ -11,6 +11,8 @@ build-type:          Simple
 extra-source-files:
   README.md
   CHANGELOG.md
+  bench/Concurrency.hs
+  bench/README.md
   examples/Jobs.hs
   examples/Rename.hs
   examples/Discover.hs
