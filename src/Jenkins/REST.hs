@@ -48,7 +48,8 @@ import qualified Jenkins.REST.Lens
 import           Jenkins.REST.Lens as L
 import           Jenkins.REST.Method
 
-{-# ANN module ("HLint: Use const" :: String) #-}
+{-# ANN module ("HLint: ignore Use const" :: String) #-}
+{-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
 
 
 -- | @GET@ query
