@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -8,7 +7,6 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE UndecidableInstances #-}
 -- | Jenkins REST API method construction
 module Jenkins.REST.Method
   ( -- * Types
@@ -23,9 +21,6 @@ module Jenkins.REST.Method
   ) where
 
 import           Data.ByteString (ByteString)
-#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ < 706)
-import           Data.ByteString.Char8 ()
-#endif
 import qualified Data.ByteString as B
 import           Data.Data (Data, Typeable)
 import           Data.Monoid (Monoid(..), (<>))
@@ -44,6 +39,7 @@ infix  1 :~?, -?-
 infix  3 :~@, `as`
 infix  7 :~=, -=-
 infixr 5 :~/, -/-, :~&, -&-
+
 -- | Jenkins RESTFul API method encoding
 data Method :: Type -> Format -> * where
   Empty :: Method t f
@@ -57,7 +53,7 @@ data Method :: Type -> Format -> * where
 deriving instance Show (As f) => Show (Method t f)
 
 -- | Only to support number literals
-instance Num (Method Complete f) where
+instance t ~ Complete => Num (Method t f) where
   (+)         = error "Method.(+): not supposed to be used"
   (*)         = error "Method.(*): not supposed to be used"
   abs         = error "Method.abs: not supposed to be used"

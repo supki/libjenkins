@@ -20,7 +20,6 @@ executable jenkins-jobs
     , lens
     , lens-aeson
     , libjenkins
-    , optparse-applicative
     , text
 
 executable jenkins-rename
@@ -32,7 +31,6 @@ executable jenkins-rename
     , lens
     , lens-aeson
     , libjenkins
-    , optparse-applicative
     , text
 
 executable jenkins-discover

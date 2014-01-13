@@ -3,36 +3,50 @@
 -- | Rename jobs matching supplied pattern
 module Main where
 
-import           Control.Lens               -- lens
-import           Control.Lens.Aeson         -- lens-aeson
-import           Control.Monad (when)       -- base
-import qualified Data.ByteString.Char8 as B -- bytestring
-import           Data.Foldable (for_)       -- base
-import           Data.Function (fix)        -- base
-import           Data.Text (Text)           -- text
-import qualified Data.Text as T             -- text
-import qualified Data.Text.IO as T          -- text
-import           Jenkins.REST               -- libjenkins
-import           Options.Applicative        -- optparse-applicative
-import           System.Exit (exitFailure)  -- base
+import           Control.Lens                  -- lens
+import           Control.Lens.Aeson            -- lens-aeson
+import           Control.Monad (when)          -- base
+import qualified Data.ByteString.Char8 as B    -- bytestring
+import           Data.Foldable (for_)          -- base
+import           Data.Function (fix)           -- base
+import           Data.Text (Text)              -- text
+import qualified Data.Text as T                -- text
+import qualified Data.Text.IO as T             -- text
+import           Jenkins.REST                  -- libjenkins
+import           System.Environment (getArgs)  -- base
+import           System.Exit (exitFailure)     -- base
+import           System.IO (hPutStrLn, stderr) -- base
 
 {-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
+
+
+-- | Program options
+data Options = Options
+  { settings :: ConnectInfo
+  , old      :: Text
+  , new      :: Text
+  }
 
 
 main :: IO ()
 main = do
   -- more useful help on error
-  opts <- customExecParser (prefs showHelpOnError) options
-  res  <- rename opts
+  h:p:user:pass:o:n:_ <- getArgs
+  let opts = Options (ConnectInfo h (read p) (B.pack user) (B.pack pass)) (T.pack o) (T.pack n)
+  res <- rename opts
   case res of
-    Right () -> T.putStrLn "Done."
+    Right (Just ()) -> T.putStrLn "Done."
+    -- disconnected for some reason
+    Right Nothing -> die "disconnect!"
     -- something bad happened, show it!
-    Left  e  -> do
-      print e
-      exitFailure
+    Left e -> die (show e)
+ where
+  die message = do
+    hPutStrLn stderr message
+    exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Either Disconnect ())
+rename :: Options -> IO (Either HttpException (Maybe ()))
 rename (Options { settings, old, new }) = runJenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get (json -?- "tree" -=- "jobs[name]")
@@ -56,26 +70,3 @@ rename (Options { settings, old, new }) = runJenkins settings $ do
       "Y" -> return True
       "N" -> return False
       _   -> loop
-
-
--- | Program options
-data Options = Options
-  { settings :: Settings
-  , old      :: Text
-  , new      :: Text
-  }
-
--- | Quite a trivial options parser
-options :: ParserInfo Options
-options = info (helper <*> parser) fullDesc
- where
-  parser = Options
-    <$> parse_settings
-    <*> nullOption (reader (return . T.pack) <> long "old")
-    <*> nullOption (reader (return . T.pack) <> long "new")
-
-  parse_settings = Settings
-    <$> (Host <$> strOption (long "host"))
-    <*> (Port <$> option (long "port"))
-    <*> (User . B.pack <$> strOption (long "user"))
-    <*> (APIToken . B.pack <$> strOption (long "token" <> long "password"))

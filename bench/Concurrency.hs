@@ -15,13 +15,14 @@
 -- See @bench/README.md@ for usage instructions
 module Main (main) where
 
-import           Control.Lens                 -- lens
-import           Control.Lens.Aeson           -- lens-aeson
-import qualified Data.ByteString.Char8 as B   -- bytestring
-import           Data.Text (Text)             -- text
-import           Jenkins.REST                 -- libjenkins
-import           System.Environment (getArgs) -- base
-import           System.Exit (exitFailure)    -- base
+import           Control.Lens                  -- lens
+import           Control.Lens.Aeson            -- lens-aeson
+import qualified Data.ByteString.Char8 as B    -- bytestring
+import           Data.Text (Text)              -- text
+import           Jenkins.REST                  -- libjenkins
+import           System.Environment (getArgs)  -- base
+import           System.Exit (exitFailure)     -- base
+import           System.IO (hPutStrLn, stderr) -- base
 
 
 type Aggregate a b = (a -> Jenkins b) -> [a] -> Jenkins [b]
@@ -30,19 +31,25 @@ main :: IO ()
 main = do
   m:h:p:user:pass:_ <- getArgs
   ds <- descriptions (aggregate m) $
-    Settings (Host h) (Port (read p)) (User (B.pack user)) (APIToken (B.pack pass))
+    ConnectInfo h (read p) (B.pack user) (B.pack pass)
   case ds of
-    Right ds -> mapM_ print ds
-    Left  e  -> do
-      print e
-      exitFailure
+    Right (Just ds) -> mapM_ print ds
+    Right Nothing -> die "disconnect!"
+    Left e -> die (show e)
  where
+  die message = do
+    hPutStrLn stderr message
+    exitFailure
+
   aggregate :: String -> Aggregate a b
   aggregate "concurrent" = (concurrentlys .) . map
   aggregate "sequential" = mapM
   aggregate _ = error "Unknown mode"
 
-descriptions :: Aggregate Text (Maybe Text) -> Settings -> IO (Either Disconnect [Maybe Text])
+descriptions
+  :: Aggregate Text (Maybe Text)
+  -> ConnectInfo
+  -> IO (Either HttpException (Maybe [Maybe Text]))
 descriptions aggregate settings = runJenkins settings $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
   aggregate describe (res ^.. key "jobs"._Array.each.key "name"._String)

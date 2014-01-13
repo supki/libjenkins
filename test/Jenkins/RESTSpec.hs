@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy as Lazy
 import           Data.Monoid (mempty)
 import           Test.Hspec
 import qualified Jenkins.REST as REST
-import qualified Jenkins.REST.Internal as REST
+import           Jenkins.REST.Internal
 
 
 spec :: Spec
@@ -20,7 +20,7 @@ spec = do
         REST.post_ "bar"
         REST.post_ "baz"
      `shouldBe`
-      [Post 0 "" "foo", Post 1 "" "bar", Post 2 "" "baz"]
+      [QPost 0 "" "foo", QPost 1 "" "bar", QPost 2 "" "baz"]
 
     it "post sends POST request with non-empty body" $ do
       interpret $ do
@@ -28,7 +28,7 @@ spec = do
         REST.post "bar" "quux"
         REST.post "baz" "xyzzy"
      `shouldBe`
-      [Post 0 "qux" "foo", Post 1 "quux" "bar", Post 2 "xyzzy" "baz"]
+      [QPost 0 "qux" "foo", QPost 1 "quux" "bar", QPost 2 "xyzzy" "baz"]
 
   context "GET requests" $
     it "get sends GET requests" $ do
@@ -37,7 +37,7 @@ spec = do
         REST.get "bar"
         REST.get "baz"
      `shouldBe`
-      [Get 0 "foo", Get 1 "bar", Get 2 "baz"]
+      [QGet 0 "foo", QGet 1 "bar", QGet 2 "baz"]
 
 
   describe "reload" $
@@ -46,7 +46,7 @@ spec = do
         REST.reload
         REST.post_ "foo"
      `shouldBe`
-      [Post 0 "" "reload", Disconnect]
+      [QPost 0 "" "reload", QDisconnect]
 
   describe "restart" $
     it "calls $jenkins_url/safeRestart with POST query and then disconnects" $ do
@@ -54,7 +54,7 @@ spec = do
         REST.restart
         REST.post_ "bar"
      `shouldBe`
-      [Post 0 "" "safeRestart", Disconnect]
+      [QPost 0 "" "safeRestart", QDisconnect]
 
   describe "forceRestart" $
     it "calls $jenkins_url/restart with POST query and then disconnects" $ do
@@ -62,30 +62,29 @@ spec = do
         REST.forceRestart
         REST.post_ "baz"
      `shouldBe`
-      [Post 0 "" "restart", Disconnect]
+      [QPost 0 "" "restart", QDisconnect]
 
 
 data Query =
-    Get Int Strict.ByteString
-  | Post Int Lazy.ByteString Strict.ByteString
-  | Disconnect
-  | IO
+    QGet Int Strict.ByteString
+  | QPost Int Lazy.ByteString Strict.ByteString
+  | QDisconnect
     deriving (Show, Eq)
 
 newtype Requests a = Requests [a]
   deriving (Show, Eq)
 
 interpret :: REST.Jenkins a -> [Query]
-interpret adt = evalState (REST.runJenkinsP go ([] <$ adt)) (Requests [0..]) where
-  go :: REST.JenkinsF (State (Requests Int) [Query]) -> State (Requests Int) [Query]
-  go (REST.Get m n) = do
-    r <- render Get m
+interpret adt = evalState (iterJenkins go ([] <$ adt)) (Requests [0..]) where
+  go :: JenkinsF (State (Requests Int) [Query]) -> State (Requests Int) [Query]
+  go (Get m n) = do
+    r <- render QGet m
     fmap (r :) (n mempty)
-  go (REST.Post m body n) = do
-    r <- render (\x y -> Post x body y) m
+  go (Post m body n) = do
+    r <- render (\x y -> QPost x body y) m
     fmap (r :) (n mempty)
-  go REST.Dcon =
-    return [Disconnect]
+  go Dcon =
+    return [QDisconnect]
 
 render :: (a -> Strict.ByteString -> Query) -> REST.Method f x -> State (Requests a) Query
 render f m = do

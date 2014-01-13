@@ -1,31 +1,34 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NoMonoLocalBinds #-}
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
 module Jenkins.REST.Internal where
 
-import           Control.Applicative (Applicative(..))
+import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
-import           Control.Exception (toException)
+import           Control.Exception (try, toException)
 import           Control.Lens
 import           Control.Monad (join)
 import           Control.Monad.Free.Church (F, iterM, liftF)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Control (MonadTransControl(..))
-import           Control.Monad.Trans.Reader (ReaderT, ask, local)
-import           Control.Monad.Trans.Maybe (MaybeT, mapMaybeT)
+import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
+import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Conduit (ResourceT)
+import           Data.Data (Data, Typeable)
+import           GHC.Generics (Generic)
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (Status(..))
 
-import           Jenkins.REST.Lens as L
 import           Jenkins.REST.Method
+import qualified Network.HTTP.Conduit.Lens as L
 
 
 -- | Jenkins REST API composable queries
@@ -60,25 +63,41 @@ liftJ = Jenkins . liftF
 {-# INLINE liftJ #-}
 
 
-runJenkinsIO
+-- | Query Jenkins REST API
+--
+-- Successful result can be either @ 'Just' val @ or @ 'Nothing' @ in case of
+-- premature disconnect (see 'reload', 'restart', or 'forceRestart')
+--
+-- Catches 'HttpException's thrown by @http-conduit@, but
+-- does not catch exceptions thrown by embedded 'IO' actions
+runJenkins :: ConnectInfo -> Jenkins a -> IO (Either HttpException (Maybe a))
+runJenkins (ConnectInfo h p user token) jenk =
+  try . withManager $ \manager -> do
+    req <- liftIO $ parseUrl h
+    let req' = req
+          & L.port            .~ p
+          & L.responseTimeout .~ Just (20 * 1000000)
+    runReaderT (runMaybeT (iterJenkinsIO manager jenk)) (applyBasicAuth user token req')
+
+-- | Interpret 'JenkinsF' AST in 'IO'
+iterJenkinsIO
   :: Manager
   -> Jenkins a
   -> MaybeT (ReaderT Request (ResourceT IO)) a
-runJenkinsIO manager = runJenkinsP (jenkinsIO manager)
-{-# INLINE runJenkinsIO #-}
+iterJenkinsIO manager = iterJenkins (interpreter manager)
+{-# INLINE iterJenkinsIO #-}
 
--- | Generic Jenkins REST API queries interpreter
---
--- Particularly useful for testing (with @m ≡ 'Identity'@)
-runJenkinsP :: Monad m => (JenkinsF (m a) -> m a) -> Jenkins a -> m a
-runJenkinsP go = iterM go . unJenkins
-{-# INLINE runJenkinsP #-}
+-- | Tear down 'JenkinsF' AST with a 'JenkinsF'-algebra
+iterJenkins :: Monad m => (JenkinsF (m a) -> m a) -> Jenkins a -> m a
+iterJenkins go = iterM go . unJenkins
+{-# INLINE iterJenkins #-}
 
-jenkinsIO
+-- | 'JenkinsF' AST interpreter
+interpreter
   :: Manager
   -> JenkinsF (MaybeT (ReaderT Request (ResourceT IO)) a)
   -> MaybeT (ReaderT Request (ResourceT IO)) a
-jenkinsIO manager = go where
+interpreter manager = go where
   go (Get m next) = do
     req <- lift ask
     let req' = req
@@ -102,13 +121,73 @@ jenkinsIO manager = go where
   go (Conc jenka jenkb next) = do
     (a, b) <- liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
       let run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
-          run = run''' . run'' . run' . runJenkinsIO manager
+          run = run''' . run'' . run' . iterJenkinsIO manager
       in concurrently (run jenka) (run jenkb)
     c <- restoreT . restoreT . restoreT $ return a
     d <- restoreT . restoreT . restoreT $ return b
     next c d
   go (IO action) = join (liftIO action)
   go (With f jenk next) = do
-    res <- mapMaybeT (local f) (runJenkinsIO manager jenk)
+    res <- mapMaybeT (local f) (iterJenkinsIO manager jenk)
     next res
   go Dcon = fail "disconnect"
+
+
+-- | Jenkins connection settings
+--
+-- '_jenkinsApiToken' may be user's password, Jenkins
+-- does not make any distinction between these concepts
+data ConnectInfo = ConnectInfo
+  { _jenkinsUrl      :: String       -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
+  , _jenkinsPort     :: Int          -- ^ Jenkins port, e.g. @8080@
+  , _jenkinsUser     :: B.ByteString -- ^ Jenkins user, e.g. @jenkins@
+  , _jenkinsApiToken :: B.ByteString -- ^ Jenkins user API token
+  } deriving (Show, Eq, Typeable, Data, Generic)
+
+
+-- | Default Jenkins connection settings
+--
+-- @
+-- defaultConnectInfo = ConnectInfo
+--   { _jenkinsUrl      = \"http:\/\/example.com\/jenkins\"
+--   , _jenkinsPort     = 8080
+--   , _jenkinsUser     = \"jenkins\"
+--   , _jenkinsApiToken = \"\"
+--   }
+-- @
+defaultConnectInfo :: ConnectInfo
+defaultConnectInfo = ConnectInfo
+  { _jenkinsUrl      = "http://example.com/jenkins"
+  , _jenkinsPort     = 8080
+  , _jenkinsUser     = "jenkins"
+  , _jenkinsApiToken = ""
+  }
+
+-- | A lens into Jenkins URL
+jenkinsUrl :: Lens' ConnectInfo String
+jenkinsUrl f req = (\u' -> req { _jenkinsUrl = u' }) <$> f (_jenkinsUrl req)
+{-# INLINE jenkinsUrl #-}
+
+-- | A lens into Jenkins port
+jenkinsPort :: Lens' ConnectInfo Int
+jenkinsPort f req = (\p' -> req { _jenkinsPort = p' }) <$> f (_jenkinsPort req)
+{-# INLINE jenkinsPort #-}
+
+-- | A lens into Jenkins user
+jenkinsUser :: Lens' ConnectInfo B.ByteString
+jenkinsUser f req = (\u' -> req { _jenkinsUser = u' }) <$> f (_jenkinsUser req)
+{-# INLINE jenkinsUser #-}
+
+-- | A lens into Jenkins user API token
+jenkinsApiToken :: Lens' ConnectInfo B.ByteString
+jenkinsApiToken f req = (\a' -> req { _jenkinsApiToken = a' }) <$> f (_jenkinsApiToken req)
+{-# INLINE jenkinsApiToken #-}
+
+-- | A lens into Jenkins password
+--
+-- @
+-- jenkinsPassword = jenkinsApiToken
+-- @
+jenkinsPassword :: Lens' ConnectInfo B.ByteString
+jenkinsPassword = jenkinsApiToken
+{-# INLINE jenkinsPassword #-}

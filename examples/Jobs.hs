@@ -3,15 +3,16 @@
 -- | Show jobs status
 module Main where
 
-import           Control.Lens                 -- lens
-import           Control.Lens.Aeson           -- lens-aeson
-import qualified Data.ByteString.Char8 as B   -- bytestring
-import           Data.Text (Text)             -- text
-import qualified Data.Text.IO as T            -- text
-import           Jenkins.REST hiding (render) -- libjenkins
-import           Options.Applicative          -- optparse-applicative
-import           System.Console.ANSI          -- ansi-terminal
-import           System.Exit (exitFailure)    -- base
+import           Control.Lens                  -- lens
+import           Control.Lens.Aeson            -- lens-aeson
+import qualified Data.ByteString.Char8 as B    -- bytestring
+import           Data.Text (Text)              -- text
+import qualified Data.Text.IO as T             -- text
+import           Jenkins.REST hiding (render)  -- libjenkins
+import           System.Console.ANSI           -- ansi-terminal
+import           System.Environment (getArgs)  -- base
+import           System.Exit (exitFailure)     -- base
+import           System.IO (hPutStrLn, stderr) -- base
 
 {-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
 
@@ -26,20 +27,25 @@ data Job = Job
 main :: IO ()
 main = do
   -- more useful help on error
-  opts <- customExecParser (prefs showHelpOnError) options
+  h:p:user:pass:_ <- getArgs
+  let conn = ConnectInfo h (read p) (B.pack user) (B.pack pass)
   -- get all jobs (colored)
-  jobs <- colorized_jobs opts
+  jobs <- colorized_jobs conn
   case jobs of
     -- render them
-    Right js -> mapM_ render js
+    Right (Just js) -> mapM_ render js
+    -- disconnected for some reason
+    Right Nothing -> die "disconnect!"
     -- something bad happened, show it!
-    Left  e  -> do
-      print e
-      exitFailure
+    Left e -> die (show e)
+ where
+  die message = do
+    hPutStrLn stderr message
+    exitFailure
 
 -- get jobs names from jenkins "root" API
-colorized_jobs :: Settings -> IO (Either Disconnect [Job])
-colorized_jobs settings = runJenkins settings $ do
+colorized_jobs :: ConnectInfo -> IO (Either HttpException (Maybe [Job]))
+colorized_jobs conn = runJenkins conn $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs"._Array.each.key "name"._String
   concurrentlys (map colorize jobs)
@@ -60,14 +66,3 @@ render Job { name, color } = do
   setSGR [SetColor Foreground Dull color]
   T.putStrLn name
   setSGR []
-
-
--- | Quite a trivial jenkins settings parser
-options :: ParserInfo Settings
-options = info (helper <*> parser) fullDesc
- where
-  parser = Settings
-    <$> (Host <$> strOption (long "host"))
-    <*> (Port <$> option (long "port"))
-    <*> (User . B.pack <$> strOption (long "user"))
-    <*> (APIToken . B.pack <$> strOption (long "token" <> long "password"))
