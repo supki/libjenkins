@@ -1,5 +1,5 @@
 name:                libjenkins
-version:             0.2.0.0
+version:             0.3.0.0
 synopsis:            Jenkins API interface
 description:         Jenkins API interface. It supports REST and Discovery APIs
 license:             BSD3
