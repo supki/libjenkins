@@ -17,7 +17,7 @@ module Jenkins.REST
     -- ** Jenkins method construction
   , module Jenkins.REST.Method
     -- ** Little helpers
-  , concurrentlys, concurrentlys_, postXML, reload, restart
+  , concurrentlys, concurrentlys_, postXML, reload, restart, forceRestart
     -- * Jenkins queries execution
   , runJenkins, runJenkinsP
     -- ** Lenses and prisms
@@ -119,12 +119,21 @@ reload = do
   disconnect
 {-# INLINE reload #-}
 
--- | Restart jenkins
+-- | Restart jenkins safely
+--
+-- Allows all running jobs to complete
 restart :: Jenkins a
 restart = do
-  post_ "restart"
+  post_ "safeRestart"
   disconnect
 {-# INLINE restart #-}
+
+-- | Force jenkins to restart without waiting running jobs to finish
+forceRestart :: Jenkins a
+forceRestart = do
+  post_ "restart"
+  disconnect
+{-# INLINE forceRestart #-}
 
 
 -- | Jenkins settings
