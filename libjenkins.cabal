@@ -55,6 +55,17 @@ test-suite doctest
   hs-source-dirs:    test
   main-is:           Doctest.hs
 
+test-suite spec
+  default-language:  Haskell2010
+  type:              exitcode-stdio-1.0
+  build-depends:
+      base == 4.*
+    , bytestring
+    , hspec
+    , libjenkins
+  hs-source-dirs:    test
+  main-is:           Spec.hs
+
 source-repository head
   type:     git
   location: https://github.com/supki/libjenkins
