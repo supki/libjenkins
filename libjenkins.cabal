@@ -63,8 +63,11 @@ test-suite spec
     , bytestring
     , hspec
     , libjenkins
+    , transformers
   hs-source-dirs:    test
   main-is:           Spec.hs
+  other-modules:
+    Jenkins.RESTSpec
 
 source-repository head
   type:     git
