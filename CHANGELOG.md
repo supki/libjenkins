@@ -5,6 +5,8 @@
   `$jenkins_url/safe-restart` which waits running jobs to complete. New `forceRestart` function
   does now what `restart` did before
 
+  * Massive refactoring
+
 0.2.0.0
 =======
 
