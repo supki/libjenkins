@@ -33,9 +33,9 @@ main = do
   ds <- descriptions (aggregate m) $
     ConnectInfo h (read p) (B.pack user) (B.pack pass)
   case ds of
-    Right (Just ds) -> mapM_ print ds
-    Right Nothing -> die "disconnect!"
-    Left e -> die (show e)
+    Value ds   -> mapM_ print ds
+    Disconnect -> die "disconnect!"
+    Error e    -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
@@ -49,10 +49,10 @@ main = do
 descriptions
   :: Aggregate Text (Maybe Text)
   -> ConnectInfo
-  -> IO (Either HttpException (Maybe [Maybe Text]))
+  -> IO (Result HttpException [Maybe Text])
 descriptions aggregate settings = runJenkins settings $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
-  aggregate describe (res ^.. key "jobs"._Array.each.key "name"._String)
+  aggregate describe (res ^.. key "jobs".values.key "name"._String)
 
 describe :: Text -> Jenkins (Maybe Text)
 describe name = do

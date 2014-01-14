@@ -18,7 +18,7 @@ executable jenkins-jobs
     , base
     , bytestring
     , lens
-    , lens-aeson
+    , lens-aeson    >= 0.1.2
     , libjenkins
     , text
 
@@ -29,7 +29,7 @@ executable jenkins-rename
       base
     , bytestring
     , lens
-    , lens-aeson
+    , lens-aeson    >= 0.1.2
     , libjenkins
     , text
 

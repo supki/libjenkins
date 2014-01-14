@@ -1,47 +1,46 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 -- | Jenkins REST API interface
 module Jenkins.REST
   ( -- * Query Jenkins
-    runJenkins, ConnectInfo(..), defaultConnectInfo, Jenkins
+    runJenkins, ConnectInfo(..), defaultConnectInfo, Jenkins, Result(..)
     -- ** Combinators
   , get, post, post_, concurrently, io, disconnect, with
     -- ** Method
   , module Jenkins.REST.Method
     -- ** Convenience
   , postXML, concurrentlys, concurrentlys_, reload, restart, forceRestart
-    -- * Lenses
+    -- * Lensy things
   , jenkinsUrl, jenkinsPort, jenkinsUser, jenkinsApiToken, jenkinsPassword
-  , module L
+  , _Error, _Disconnect, _Value
+  , module Network.HTTP.Conduit.Lens
     -- * Misc
   , Request, HttpException
   ) where
 
-import           Control.Applicative ((<$))
-import           Control.Lens
-import           Control.Monad.IO.Class (MonadIO(..))
-import qualified Data.ByteString.Lazy as BL
-import           Data.Default (Default(..))
-import           Data.Monoid (mempty)
-import           Network.HTTP.Conduit (Request, HttpException)
-import           Text.XML (Document, renderLBS)
+import Control.Applicative ((<$))
+import Control.Lens
+import Control.Monad.IO.Class (MonadIO(..))
+import Data.ByteString.Lazy (ByteString)
+import Data.Monoid (mempty)
+import Network.HTTP.Conduit (Request, HttpException)
+import Text.XML (Document, renderLBS, def)
 
-import           Jenkins.REST.Internal
-import           Jenkins.REST.Method
-import qualified Network.HTTP.Conduit.Lens as L
+import Jenkins.REST.Internal
+import Jenkins.REST.Method
+import Network.HTTP.Conduit.Lens
 
 {-# ANN module ("HLint: ignore Use const" :: String) #-}
 
 
 -- | @GET@ query
-get :: Method Complete f -> Jenkins BL.ByteString
+get :: Method Complete f -> Jenkins ByteString
 get m = liftJ $ Get m id
 {-# INLINE get #-}
 
 -- | @POST@ query (with payload)
-post :: (forall f. Method Complete f) -> BL.ByteString -> Jenkins ()
+post :: (forall f. Method Complete f) -> ByteString -> Jenkins ()
 post m body = liftJ $ Post m body (\_ -> ())
 {-# INLINE post #-}
 
@@ -76,7 +75,7 @@ with f j = liftJ $ With f j id
 -- | @POST@ job's @config.xml@ (in @xml-conduit@ format)
 postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
 postXML m =
-  with (L.requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
+  with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
 {-# INLINE postXML #-}
 
 -- | Do a list of queries 'concurrently'

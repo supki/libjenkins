@@ -35,22 +35,22 @@ main = do
   let opts = Options (ConnectInfo h (read p) (B.pack user) (B.pack pass)) (T.pack o) (T.pack n)
   res <- rename opts
   case res of
-    Right (Just ()) -> T.putStrLn "Done."
+    Value _ -> T.putStrLn "Done."
     -- disconnected for some reason
-    Right Nothing -> die "disconnect!"
+    Disconnect -> die "disconnect!"
     -- something bad happened, show it!
-    Left e -> die (show e)
+    Error e -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
     exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Either HttpException (Maybe ()))
+rename :: Options -> IO (Result HttpException ())
 rename (Options { settings, old, new }) = runJenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get (json -?- "tree" -=- "jobs[name]")
-  let jobs = res ^.. key "jobs"._Array.each.key "name"._String
+  let jobs = res ^.. key "jobs".values.key "name"._String
   for_ jobs rename_job
  where
   rename_job :: Text -> Jenkins ()

@@ -33,21 +33,21 @@ main = do
   jobs <- colorized_jobs conn
   case jobs of
     -- render them
-    Right (Just js) -> mapM_ render js
+    Value js -> mapM_ render js
     -- disconnected for some reason
-    Right Nothing -> die "disconnect!"
+    Disconnect -> die "disconnect!"
     -- something bad happened, show it!
-    Left e -> die (show e)
+    Error e -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
     exitFailure
 
 -- get jobs names from jenkins "root" API
-colorized_jobs :: ConnectInfo -> IO (Either HttpException (Maybe [Job]))
+colorized_jobs :: ConnectInfo -> IO (Result HttpException [Job])
 colorized_jobs conn = runJenkins conn $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
-  let jobs = res ^.. key "jobs"._Array.each.key "name"._String
+  let jobs = res ^.. key "jobs".values.key "name"._String
   concurrentlys (map colorize jobs)
 
 -- get jobs colors as they appear on web UI

@@ -6,11 +6,12 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+-- | Jenkins REST API interface internals
 module Jenkins.REST.Internal where
 
 import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
-import           Control.Exception (try, toException)
+import           Control.Exception (Exception, try, toException)
 import           Control.Lens
 import           Control.Monad (join)
 import           Control.Monad.Free.Church (F, iterM, liftF)
@@ -31,7 +32,7 @@ import           Jenkins.REST.Method
 import qualified Network.HTTP.Conduit.Lens as L
 
 
--- | Jenkins REST API composable queries
+-- | Jenkins REST API query sequence description
 newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
   deriving (Functor, Applicative, Monad)
 
@@ -39,7 +40,7 @@ instance MonadIO Jenkins where
   liftIO = liftJ . IO
   {-# INLINE liftIO #-}
 
--- | 'JenkinsF' terms
+-- | Jenkins REST API query
 data JenkinsF a where
   Get  :: Method Complete f -> (BL.ByteString -> a) -> JenkinsF a
   Post :: (forall f. Method Complete f) -> BL.ByteString -> (BL.ByteString -> a) -> JenkinsF a
@@ -57,27 +58,59 @@ instance Functor JenkinsF where
   fmap _ Dcon            = Dcon
   {-# INLINE fmap #-}
 
--- | Lift 'JenkinsF' query to the 'Jenkins' query language
+-- | Lift 'JenkinsF' to 'Jenkins'
 liftJ :: JenkinsF a -> Jenkins a
 liftJ = Jenkins . liftF
 {-# INLINE liftJ #-}
 
-
--- | Query Jenkins REST API
+-- | Query Jenkins API using 'Jenkins' description
 --
--- Successful result can be either @ 'Just' val @ or @ 'Nothing' @ in case of
--- premature disconnect (see 'reload', 'restart', or 'forceRestart')
+-- Successful result is either 'Disconnect' or @ 'Value' v @
 --
--- Catches 'HttpException's thrown by @http-conduit@, but
--- does not catch exceptions thrown by embedded 'IO' actions
-runJenkins :: ConnectInfo -> Jenkins a -> IO (Either HttpException (Maybe a))
+-- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
+-- and wraps into 'Error'. Other exceptions are /not/ catched
+runJenkins :: ConnectInfo -> Jenkins a -> IO (Result HttpException a)
 runJenkins (ConnectInfo h p user token) jenk =
-  try . withManager $ \manager -> do
+  fmap result . try . withManager $ \manager -> do
     req <- liftIO $ parseUrl h
     let req' = req
           & L.port            .~ p
           & L.responseTimeout .~ Just (20 * 1000000)
     runReaderT (runMaybeT (iterJenkinsIO manager jenk)) (applyBasicAuth user token req')
+ where
+  result (Left e)           = Error e
+  result (Right Nothing)    = Disconnect
+  result (Right (Just val)) = Value val
+
+-- | The result of Jenkins REST API queries
+data Result e v =
+    Error e    -- ^ Exception @e@ was thrown while querying
+  | Disconnect -- ^ The client was explicitly disconnected
+  | Value v    -- ^ Querying successfully finished with value @v@
+    deriving (Show, Eq, Ord, Typeable, Data, Generic)
+
+-- | A prism into Jenkins error
+_Error :: Prism (Result e a) (Result e' a) e e'
+_Error = prism Error $ \case
+  Error e    -> Right e
+  Disconnect -> Left Disconnect
+  Value a    -> Left (Value a)
+{-# INLINE _Error #-}
+
+-- | A prism into disconnect
+_Disconnect :: Prism' (Result e a) ()
+_Disconnect = prism' (\_ -> Disconnect) $ \case
+  Disconnect -> Just ()
+  _          -> Nothing
+{-# INLINE _Disconnect #-}
+
+-- | A prism into resulting value
+_Value :: Prism (Result e a) (Result e b) a b
+_Value = prism Value $ \case
+  Error e    -> Left (Error e)
+  Disconnect -> Left Disconnect
+  Value a    -> Right a
+{-# INLINE _Value #-}
 
 -- | Interpret 'JenkinsF' AST in 'IO'
 iterJenkinsIO
