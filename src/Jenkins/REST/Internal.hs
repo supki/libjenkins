@@ -13,7 +13,7 @@ import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
 import           Control.Exception (Exception, try, toException)
 import           Control.Lens
-import           Control.Monad (join)
+import           Control.Monad
 import           Control.Monad.Free.Church (F, iterM, liftF)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Class (lift)
@@ -86,7 +86,7 @@ runJenkins (ConnectInfo h p user token) jenk =
 data Result e v =
     Error e    -- ^ Exception @e@ was thrown while querying
   | Disconnect -- ^ The client was explicitly disconnected
-  | Value v    -- ^ Querying successfully finished with value @v@
+  | Value v    -- ^ Querying successfully finished the with value @v@
     deriving (Show, Eq, Ord, Typeable, Data, Generic)
 
 -- | A prism into Jenkins error
@@ -153,9 +153,11 @@ interpreter manager = go where
     next (responseBody res)
   go (Conc jenka jenkb next) = do
     (a, b) <- liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
-      let run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
-          run = run''' . run'' . run' . iterJenkinsIO manager
-      in concurrently (run jenka) (run jenkb)
+      let
+        run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
+        run = run''' . run'' . run' . iterJenkinsIO manager
+      in
+        concurrently (run jenka) (run jenkb)
     c <- restoreT . restoreT . restoreT $ return a
     d <- restoreT . restoreT . restoreT $ return b
     next c d
@@ -163,7 +165,7 @@ interpreter manager = go where
   go (With f jenk next) = do
     res <- mapMaybeT (local f) (iterJenkinsIO manager jenk)
     next res
-  go Dcon = fail "disconnect"
+  go Dcon = mzero
 
 
 -- | Jenkins connection settings
