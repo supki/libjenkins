@@ -40,3 +40,13 @@ executable jenkins-discover
       base
     , libjenkins
     , text
+
+executable running-jobs-count
+  default-language:  Haskell2010
+  main-is:           running-jobs-count.hs
+  build-depends:
+      base
+    , bytestring
+    , lens
+    , lens-aeson    >= 0.1.2
+    , libjenkins
