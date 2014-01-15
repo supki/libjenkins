@@ -35,7 +35,7 @@ main = do
   let opts = Options (ConnectInfo h (read p) (B.pack user) (B.pack pass)) (T.pack o) (T.pack n)
   res <- rename opts
   case res of
-    Value _ -> T.putStrLn "Done."
+    Result _ -> T.putStrLn "Done."
     -- disconnected for some reason
     Disconnect -> die "disconnect!"
     -- something bad happened, show it!

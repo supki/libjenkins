@@ -13,7 +13,7 @@ module Jenkins.REST
   , postXML, concurrentlys, concurrentlys_, reload, restart, forceRestart
     -- * Lensy things
   , jenkinsUrl, jenkinsPort, jenkinsUser, jenkinsApiToken, jenkinsPassword
-  , _Error, _Disconnect, _Value
+  , _Error, _Disconnect, _Result
   , module Network.HTTP.Conduit.Lens
     -- * Misc
   , Request, HttpException

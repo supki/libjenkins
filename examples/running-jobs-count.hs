@@ -7,14 +7,13 @@
 -- it to "blue_anime", meaning "animated blue ball" if job is running
 module Main (main) where
 
-import Control.Applicative                       -- base
-import Control.Lens                              -- lens
-import Control.Lens.Aeson (key, values, _String) -- lens-aeson
-import Data.ByteString.Lazy (ByteString)         -- bytestring
-import Data.String (fromString)                  -- bytestring
-import Jenkins.REST                              -- libjenkins
-import System.Environment (getArgs)              -- base
-import Text.Printf (printf)                      -- base
+import Control.Lens                      -- lens
+import Control.Lens.Aeson                -- lens-aeson
+import Data.ByteString.Lazy (ByteString) -- bytestring
+import Data.String (fromString)          -- bytestring
+import Jenkins.REST                      -- libjenkins
+import System.Environment (getArgs)      -- base
+import Text.Printf (printf)              -- base
 
 
 main :: IO ()
@@ -22,7 +21,7 @@ main = do
   host:port:user:apiToken:_ <- getArgs
   let creds = ConnectInfo host (read port) (fromString user) (fromString apiToken)
   jobs <- runJenkins creds getJobs
-  printf "Running jobs count: %d\n" (lengthOf (_Value.running) jobs)
+  printf "Running jobs count: %d\n" (lengthOf (_Result.running) jobs)
 
 getJobs :: Jenkins ByteString
 getJobs = get (json -?- "tree" -=- "jobs[color]")

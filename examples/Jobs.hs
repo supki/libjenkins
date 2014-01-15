@@ -33,7 +33,7 @@ main = do
   jobs <- colorized_jobs conn
   case jobs of
     -- render them
-    Value js -> mapM_ render js
+    Result js -> mapM_ render js
     -- disconnected for some reason
     Disconnect -> die "disconnect!"
     -- something bad happened, show it!

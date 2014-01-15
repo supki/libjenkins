@@ -80,13 +80,13 @@ runJenkins (ConnectInfo h p user token) jenk =
  where
   result (Left e)           = Error e
   result (Right Nothing)    = Disconnect
-  result (Right (Just val)) = Value val
+  result (Right (Just val)) = Result val
 
 -- | The result of Jenkins REST API queries
 data Result e v =
     Error e    -- ^ Exception @e@ was thrown while querying
   | Disconnect -- ^ The client was explicitly disconnected
-  | Value v    -- ^ Querying successfully finished the with value @v@
+  | Result v   -- ^ Querying successfully finished the with value @v@
     deriving (Show, Eq, Ord, Typeable, Data, Generic)
 
 -- | A prism into Jenkins error
@@ -94,7 +94,7 @@ _Error :: Prism (Result e a) (Result e' a) e e'
 _Error = prism Error $ \case
   Error e    -> Right e
   Disconnect -> Left Disconnect
-  Value a    -> Left (Value a)
+  Result a    -> Left (Result a)
 {-# INLINE _Error #-}
 
 -- | A prism into disconnect
@@ -105,12 +105,12 @@ _Disconnect = prism' (\_ -> Disconnect) $ \case
 {-# INLINE _Disconnect #-}
 
 -- | A prism into resulting value
-_Value :: Prism (Result e a) (Result e b) a b
-_Value = prism Value $ \case
+_Result :: Prism (Result e a) (Result e b) a b
+_Result = prism Result $ \case
   Error e    -> Left (Error e)
   Disconnect -> Left Disconnect
-  Value a    -> Right a
-{-# INLINE _Value #-}
+  Result a    -> Right a
+{-# INLINE _Result #-}
 
 -- | Interpret 'JenkinsF' AST in 'IO'
 iterJenkinsIO
