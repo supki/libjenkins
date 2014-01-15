@@ -23,7 +23,7 @@ executable grep-jobs
 
 executable jenkins-rename
   default-language:  Haskell2010
-  main-is:           Rename.hs
+  main-is:           rename-jobs.hs
   build-depends:
       base
     , bytestring
@@ -34,7 +34,7 @@ executable jenkins-rename
 
 executable jenkins-discover
   default-language:  Haskell2010
-  main-is:           Discover.hs
+  main-is:           discover.hs
   build-depends:
       base
     , libjenkins

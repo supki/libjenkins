@@ -13,9 +13,9 @@ extra-source-files:
   CHANGELOG.md
   bench/Concurrency.hs
   bench/README.md
-  example/Jobs.hs
-  example/Rename.hs
-  example/Discover.hs
+  example/grep-jobs.hs
+  example/rename-jobs.hs
+  example/discover.hs
   example/running-jobs-count.hs
 cabal-version:       >= 1.10
 

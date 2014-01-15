@@ -1,5 +1,4 @@
 language: haskell
 
 script:
- - cabal install --enable-tests libjenkins.cabal
- - cabal install example/libjenkins-examples.cabal
+ - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal
