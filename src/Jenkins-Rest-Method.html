@@ -24,7 +24,7 @@
 <a name="line-15"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>text</span><span class='hs-layout'>,</span> <span class='hs-varid'>int</span><span class='hs-layout'>,</span> <span class='hs-layout'>(</span><span class='hs-varop'>-?-</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-layout'>(</span><span class='hs-varop'>-/-</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-layout'>(</span><span class='hs-varop'>-=-</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-layout'>(</span><span class='hs-varop'>-&amp;-</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-varid'>query</span>
 <a name="line-16"></a>  <span class='hs-layout'>,</span> <span class='hs-keyword'>as</span><span class='hs-layout'>,</span> <span class='hs-conid'>JSONy</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>XMLy</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>,</span> <span class='hs-conid'>Pythony</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
 <a name="line-17"></a>    <span class='hs-comment'>-- ** Helpers</span>
-<a name="line-18"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>job</span><span class='hs-layout'>,</span> <span class='hs-varid'>build</span><span class='hs-layout'>,</span> <span class='hs-varid'>view</span><span class='hs-layout'>,</span> <span class='hs-varid'>queue</span>
+<a name="line-18"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>job</span><span class='hs-layout'>,</span> <span class='hs-varid'>build</span><span class='hs-layout'>,</span> <span class='hs-varid'>view</span><span class='hs-layout'>,</span> <span class='hs-varid'>queue</span><span class='hs-layout'>,</span> <span class='hs-varid'>overallLoad</span><span class='hs-layout'>,</span> <span class='hs-varid'>computer</span>
 <a name="line-19"></a>    <span class='hs-comment'>-- * Rendering</span>
 <a name="line-20"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>render</span><span class='hs-layout'>,</span> <span class='hs-varid'>slash</span>
 <a name="line-21"></a>  <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
@@ -281,5 +281,19 @@
 <a name="line-272"></a><span class='hs-comment'>-- "queue/api/python"</span>
 <a name="line-273"></a><span class='hs-definition'>queue</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span>
 <a name="line-274"></a><span class='hs-definition'>queue</span> <span class='hs-keyglyph'>=</span> <span class='hs-str'>"queue"</span>
+<a name="line-275"></a>
+<a name="line-276"></a><a name="overallLoad"></a><span class='hs-comment'>-- | Statistics API method</span>
+<a name="line-277"></a><span class='hs-comment'>--</span>
+<a name="line-278"></a><span class='hs-comment'>-- &gt;&gt;&gt; render (overallLoad `as` xml)</span>
+<a name="line-279"></a><span class='hs-comment'>-- "overallLoad/api/xml"</span>
+<a name="line-280"></a><span class='hs-definition'>overallLoad</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span>
+<a name="line-281"></a><span class='hs-definition'>overallLoad</span> <span class='hs-keyglyph'>=</span> <span class='hs-str'>"overallLoad"</span>
+<a name="line-282"></a>
+<a name="line-283"></a><a name="computer"></a><span class='hs-comment'>-- | Node API method</span>
+<a name="line-284"></a><span class='hs-comment'>--</span>
+<a name="line-285"></a><span class='hs-comment'>-- &gt;&gt;&gt; render (computer `as` python)</span>
+<a name="line-286"></a><span class='hs-comment'>-- "computer/api/python"</span>
+<a name="line-287"></a><span class='hs-definition'>computer</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span>
+<a name="line-288"></a><span class='hs-definition'>computer</span> <span class='hs-keyglyph'>=</span> <span class='hs-str'>"computer"</span>
 </pre></body>
 </html>
