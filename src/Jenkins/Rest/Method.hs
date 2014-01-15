@@ -15,7 +15,7 @@ module Jenkins.Rest.Method
   , text, int, (-?-), (-/-), (-=-), (-&-), query
   , as, JSONy(..), XMLy(..), Pythony(..)
     -- ** Helpers
-  , job, build, view, queue
+  , job, build, view, queue, overallLoad, computer
     -- * Rendering
   , render, slash
   ) where
@@ -272,3 +272,17 @@ view name = "view" -/- text name
 -- "queue/api/python"
 queue :: Method Complete f
 queue = "queue"
+
+-- | Statistics API method
+--
+-- >>> render (overallLoad `as` xml)
+-- "overallLoad/api/xml"
+overallLoad :: Method Complete f
+overallLoad = "overallLoad"
+
+-- | Node API method
+--
+-- >>> render (computer `as` python)
+-- "computer/api/python"
+computer :: Method Complete f
+computer = "computer"

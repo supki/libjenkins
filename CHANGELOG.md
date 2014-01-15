@@ -9,6 +9,8 @@
 
   * More optics in `Network.HTTP.Conduit.Lens`
 
+  * Add `overallLoad` and `computer` REST API methods shortcuts
+
 0.2.0.0
 =======
 
