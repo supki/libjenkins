@@ -19,7 +19,7 @@ import           Control.Lens                  -- lens
 import           Control.Lens.Aeson            -- lens-aeson
 import qualified Data.ByteString.Char8 as B    -- bytestring
 import           Data.Text (Text)              -- text
-import           Jenkins.REST                  -- libjenkins
+import           Jenkins.Rest                  -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
 import           System.IO (hPutStrLn, stderr) -- base
@@ -29,11 +29,11 @@ type Aggregate a b = (a -> Jenkins b) -> [a] -> Jenkins [b]
 
 main :: IO ()
 main = do
-  m:h:p:user:pass:_ <- getArgs
+  m:host:port:user:pass:_ <- getArgs
   ds <- descriptions (aggregate m) $
-    ConnectInfo h (read p) (B.pack user) (B.pack pass)
+    ConnectInfo host (read port) (B.pack user) (B.pack pass)
   case ds of
-    Value ds   -> mapM_ print ds
+    Result ds  -> mapM_ print ds
     Disconnect -> die "disconnect!"
     Error e    -> die (show e)
  where

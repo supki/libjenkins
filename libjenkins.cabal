@@ -16,6 +16,7 @@ extra-source-files:
   examples/Jobs.hs
   examples/Rename.hs
   examples/Discover.hs
+  examples/running-jobs-count.hs
 cabal-version:       >= 1.10
 
 library
@@ -23,9 +24,9 @@ library
   hs-source-dirs:    src
   exposed-modules:
     Jenkins.Discover
-    Jenkins.REST
-    Jenkins.REST.Internal
-    Jenkins.REST.Method
+    Jenkins.Rest
+    Jenkins.Rest.Internal
+    Jenkins.Rest.Method
     Network.HTTP.Conduit.Lens
   build-depends:
       async         >= 2.0
@@ -66,7 +67,7 @@ test-suite spec
   hs-source-dirs:    test
   main-is:           Spec.hs
   other-modules:
-    Jenkins.RESTSpec
+    Jenkins.RestSpec
 
 source-repository head
   type:     git

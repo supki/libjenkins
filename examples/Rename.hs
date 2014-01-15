@@ -12,7 +12,7 @@ import           Data.Function (fix)           -- base
 import           Data.Text (Text)              -- text
 import qualified Data.Text as T                -- text
 import qualified Data.Text.IO as T             -- text
-import           Jenkins.REST                  -- libjenkins
+import           Jenkins.Rest                  -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
 import           System.IO (hPutStrLn, stderr) -- base

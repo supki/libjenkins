@@ -8,7 +8,7 @@ import           Control.Lens.Aeson            -- lens-aeson
 import qualified Data.ByteString.Char8 as B    -- bytestring
 import           Data.Text (Text)              -- text
 import qualified Data.Text.IO as T             -- text
-import           Jenkins.REST hiding (render)  -- libjenkins
+import           Jenkins.Rest hiding (render)  -- libjenkins
 import           System.Console.ANSI           -- ansi-terminal
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base

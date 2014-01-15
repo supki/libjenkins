@@ -8,7 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 -- | Jenkins REST API method construction
-module Jenkins.REST.Method
+module Jenkins.Rest.Method
   ( -- * Types
     Method, Type(..), Format, As
     -- * Method construction

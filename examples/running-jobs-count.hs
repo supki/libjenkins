@@ -11,7 +11,7 @@ import Control.Lens                      -- lens
 import Control.Lens.Aeson                -- lens-aeson
 import Data.ByteString.Lazy (ByteString) -- bytestring
 import Data.String (fromString)          -- bytestring
-import Jenkins.REST                      -- libjenkins
+import Jenkins.Rest                      -- libjenkins
 import System.Environment (getArgs)      -- base
 import Text.Printf (printf)              -- base
 

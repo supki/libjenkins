@@ -7,7 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 -- | Jenkins REST API interface internals
-module Jenkins.REST.Internal where
+module Jenkins.Rest.Internal where
 
 import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
@@ -28,7 +28,7 @@ import           GHC.Generics (Generic)
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (Status(..))
 
-import           Jenkins.REST.Method
+import           Jenkins.Rest.Method
 import qualified Network.HTTP.Conduit.Lens as L
 
 

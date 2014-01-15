@@ -2,13 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 -- | Jenkins REST API interface
-module Jenkins.REST
+module Jenkins.Rest
   ( -- * Query Jenkins
     runJenkins, ConnectInfo(..), defaultConnectInfo, Jenkins, Result(..)
     -- ** Combinators
   , get, post, post_, concurrently, io, disconnect, with
     -- ** Method
-  , module Jenkins.REST.Method
+  , module Jenkins.Rest.Method
     -- ** Convenience
   , postXML, concurrentlys, concurrentlys_, reload, restart, forceRestart
     -- * Lensy things
@@ -26,8 +26,8 @@ import Data.Monoid (mempty)
 import Network.HTTP.Conduit (Request, HttpException)
 import Text.XML (Document, renderLBS, def)
 
-import Jenkins.REST.Internal
-import Jenkins.REST.Method
+import Jenkins.Rest.Internal
+import Jenkins.Rest.Method
 import Network.HTTP.Conduit.Lens
 
 {-# ANN module ("HLint: ignore Use const" :: String) #-}
