@@ -31,8 +31,8 @@ data Options = Options
 main :: IO ()
 main = do
   -- more useful help on error
-  h:p:user:pass:o:n:_ <- getArgs
-  let opts = Options (ConnectInfo h (read p) (B.pack user) (B.pack pass)) (T.pack o) (T.pack n)
+  host:port:user:pass:o:n:_ <- getArgs
+  let opts = Options (ConnectInfo host (read port) (B.pack user) (B.pack pass)) (T.pack o) (T.pack n)
   res <- rename opts
   case res of
     Result _ -> T.putStrLn "Done."
