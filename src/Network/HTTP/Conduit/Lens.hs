@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
--- | Optics for 'Network.HTTP.Conduit' types
+-- | Optics for @http-conduit@ types
 module Network.HTTP.Conduit.Lens
   ( -- * 'Request' lenses
     method, secure
@@ -43,53 +43,57 @@ import qualified Network.HTTP.Conduit as H
 import qualified Network.HTTP.Types as H
 
 
--- | HTTP request method, eg GET, POST.
+-- | 'H.method' lens
 method :: Lens' H.Request H.Method
 method f req = (\m' -> req { H.method = m' }) <$> f (H.method req)
 {-# INLINE method #-}
 
--- | Whether to use HTTPS (ie, SSL).
+-- | 'H.secure' lens
 secure :: Lens' H.Request Bool
 secure f req = (\s' -> req { H.secure = s' }) <$> f (H.secure req)
 {-# INLINE secure #-}
 
+-- | 'H.host' lens
 host :: Lens' H.Request ByteString
 host f req = (\h' -> req { H.host = h' }) <$> f (H.host req)
 {-# INLINE host #-}
 
+-- | 'H.port' lens
 port :: Lens' H.Request Int
 port f req = (\p' -> req { H.port = p' }) <$> f (H.port req)
 {-# INLINE port #-}
 
--- | Everything from the host to the query string.
+-- | 'H.path' lens
 path :: Lens' H.Request ByteString
 path f req = (\p' -> req { H.path = p' }) <$> f (H.path req)
 {-# INLINE path #-}
 
+-- | 'H.queryString' lens
 queryString :: Lens' H.Request ByteString
 queryString f req = (\qs' -> req { H.queryString = qs' }) <$> f (H.queryString req)
 {-# INLINE queryString #-}
 
+-- | 'H.requestBody' lens
 requestBody :: Lens' H.Request H.RequestBody
 requestBody f req = (\rb' -> req { H.requestBody = rb' }) <$> f (H.requestBody req)
 {-# INLINE requestBody #-}
 
+-- | 'H.requestHeaders' lens
 requestHeaders :: Lens' H.Request H.RequestHeaders
 requestHeaders f req = (\rh' -> req { H.requestHeaders = rh' }) <$> f (H.requestHeaders req)
 {-# INLINE requestHeaders #-}
 
--- | How many redirects to follow when getting a resource. 0 means follow no redirects. Default value: 10.
+-- | 'H.redirectCount' lens
 redirectCount :: Lens' H.Request Int
 redirectCount f req = (\rc' -> req { H.redirectCount = rc' }) <$> f (H.redirectCount req)
 {-# INLINE redirectCount #-}
 
--- | Check the status code. Note that this will run after all redirects are performed.
--- Default: return a StatusCodeException on non-2XX responses.
+-- | 'H.checkStatus' lens
 checkStatus :: Lens' H.Request (H.Status -> H.ResponseHeaders -> H.CookieJar -> Maybe SomeException)
 checkStatus f req = (\cs' -> req { H.checkStatus = cs' }) <$> f (H.checkStatus req)
 {-# INLINE checkStatus #-}
 
--- | Number of microseconds to wait for a response. If Nothing, will wait indefinitely. Default: 5 seconds.
+-- | 'H.responseTimeout' lens
 responseTimeout :: Lens' H.Request (Maybe Int)
 responseTimeout f req = (\rt' -> req { H.responseTimeout = rt' }) <$> f (H.responseTimeout req)
 {-# INLINE responseTimeout #-}
