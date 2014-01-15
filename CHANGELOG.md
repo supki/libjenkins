@@ -7,6 +7,8 @@
 
   * Massive refactoring
 
+  * More optics in `Network.HTTP.Conduit.Lens`
+
 0.2.0.0
 =======
 
