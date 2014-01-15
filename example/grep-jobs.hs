@@ -11,8 +11,7 @@ import           Data.String (fromString)                  -- base
 import           Data.Text (Text)                          -- text
 import qualified Data.Text as Text                         -- text
 import qualified Data.Text.IO as Text                      -- text
-import           Jenkins.REST                              -- libjenkins
-  (ConnectInfo(..), _Value, runJenkins, get, json, (-?-), (-=-))
+import           Jenkins.Rest                              -- libjenkins
 import           System.Environment (getArgs)              -- base
 import           System.Exit.Lens                          -- lens
 import           System.Process (readProcessWithExitCode)  -- process
@@ -32,7 +31,7 @@ grep :: String -> ConnectInfo -> IO [Text]
 grep regex conn = do
   jobs <- runJenkins conn $
     get (json -?- "tree" -=- "jobs[name]") <&> \res -> res ^.. key "jobs".values.key "name"._String
-  filterM (match regex) (jobs ^.. _Value.folded)
+  filterM (match regex) (jobs ^.. _Result.folded)
 
 -- | Match job name again Perl regex
 match :: String -> Text -> IO Bool
