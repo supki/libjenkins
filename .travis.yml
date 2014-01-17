@@ -1,5 +1,8 @@
 language: haskell
 
+install:
+ - cabal install --enable-tests --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal
+
 script:
  - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal
  - cabal sdist
