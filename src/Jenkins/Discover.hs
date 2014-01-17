@@ -3,7 +3,11 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | Discover Jenkins on the network
 module Jenkins.Discover
-  ( Discover(..), discover
+  ( Discover(..)
+  , discover
+#ifdef TEST
+  , parse
+#endif
   ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
@@ -28,7 +32,7 @@ data Discover = Discover
   { version   :: Text
   , url       :: Text
   , server_id :: Maybe Text
-  } deriving (Show, Read)
+  } deriving (Show, Eq)
 
 
 -- | Discover Jenkins on the network
@@ -37,7 +41,7 @@ discover
   -> IO [Discover]
 discover t = do
   (b, addr) <- broadcastSocket
-  B.sendTo b (B.pack [0, 0, 0, 0]) addr -- does not matter what to send here
+  B.sendTo b (B.pack [0, 0, 0, 0]) addr -- does not matter what to send
 
   msgs <- while (timeout t (readAnswer b))
 
@@ -76,7 +80,7 @@ readAnswer s = fst <$> B.recvFrom s 4096
 -- </hudson>
 -- @
 parse :: ByteString -> Maybe Discover
-parse (X.parseLBS X.def . fromStrict -> bs) = case bs of
+parse (X.parseLBS X.def . BL.fromStrict -> bs) = case bs of
   Left  _      -> Nothing
   Right parsed ->
     let v = parsed^?deeper.X.el "version".content
@@ -86,10 +90,3 @@ parse (X.parseLBS X.def . fromStrict -> bs) = case bs of
  where
   content = X.nodes.traverse.X._Content
   deeper  = X.root.X.nodes.traverse.X._Element
-
-fromStrict :: ByteString -> BL.ByteString
-#if defined(__GLASGOW_HASKELL__) && (__GLASGOW_HASKELL__ >= 706)
-fromStrict = BL.fromStrict
-#else
-fromStrict = BL.fromChunks . pure
-#endif
