@@ -63,12 +63,19 @@ liftJ :: JenkinsF a -> Jenkins a
 liftJ = Jenkins . liftF
 {-# INLINE liftJ #-}
 
+-- | The result of Jenkins REST API queries
+data Result e v =
+    Error e    -- ^ Exception @e@ was thrown while querying
+  | Disconnect -- ^ The client was explicitly disconnected
+  | Result v   -- ^ Querying successfully finished the with value @v@
+    deriving (Show, Eq, Ord, Typeable, Data, Generic)
+
 -- | Query Jenkins API using 'Jenkins' description
 --
--- Successful result is either 'Disconnect' or @ 'Value' v @
+-- Successful result is either 'Disconnect' or @ 'Result' v @
 --
 -- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
--- and wraps into 'Error'. Other exceptions are /not/ catched
+-- and wraps in 'Error'. Other exceptions are /not/ catched
 runJenkins :: ConnectInfo -> Jenkins a -> IO (Result HttpException a)
 runJenkins (ConnectInfo h p user token) jenk =
   fmap result . try . withManager $ \manager -> do
@@ -78,23 +85,17 @@ runJenkins (ConnectInfo h p user token) jenk =
           & L.responseTimeout .~ Just (20 * 1000000)
     runReaderT (runMaybeT (iterJenkinsIO manager jenk)) (applyBasicAuth user token req')
  where
+  result :: Either e (Maybe v) -> Result e v
   result (Left e)           = Error e
   result (Right Nothing)    = Disconnect
   result (Right (Just val)) = Result val
-
--- | The result of Jenkins REST API queries
-data Result e v =
-    Error e    -- ^ Exception @e@ was thrown while querying
-  | Disconnect -- ^ The client was explicitly disconnected
-  | Result v   -- ^ Querying successfully finished the with value @v@
-    deriving (Show, Eq, Ord, Typeable, Data, Generic)
 
 -- | A prism into Jenkins error
 _Error :: Prism (Result e a) (Result e' a) e e'
 _Error = prism Error $ \case
   Error e    -> Right e
   Disconnect -> Left Disconnect
-  Result a    -> Left (Result a)
+  Result a   -> Left (Result a)
 {-# INLINE _Error #-}
 
 -- | A prism into disconnect
@@ -104,12 +105,12 @@ _Disconnect = prism' (\_ -> Disconnect) $ \case
   _          -> Nothing
 {-# INLINE _Disconnect #-}
 
--- | A prism into resulting value
+-- | A prism into result
 _Result :: Prism (Result e a) (Result e b) a b
 _Result = prism Result $ \case
   Error e    -> Left (Error e)
   Disconnect -> Left Disconnect
-  Result a    -> Right a
+  Result a   -> Right a
 {-# INLINE _Result #-}
 
 -- | Interpret 'JenkinsF' AST in 'IO'
@@ -178,7 +179,6 @@ data ConnectInfo = ConnectInfo
   , _jenkinsUser     :: B.ByteString -- ^ Jenkins user, e.g. @jenkins@
   , _jenkinsApiToken :: B.ByteString -- ^ Jenkins user API token
   } deriving (Show, Eq, Typeable, Data, Generic)
-
 
 -- | Default Jenkins connection settings
 --

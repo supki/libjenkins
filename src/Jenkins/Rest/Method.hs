@@ -10,14 +10,28 @@
 -- | Jenkins REST API method construction
 module Jenkins.Rest.Method
   ( -- * Types
-    Method, Type(..), Format, As
+    Method
+  , Type(..)
+  , Format
+  , As
     -- * Method construction
-  , text, int, (-?-), (-/-), (-=-), (-&-), query
-  , as, JSONy(..), XMLy(..), Pythony(..)
-    -- ** Helpers
-  , job, build, view, queue, overallLoad, computer
+  , text, int
+  , (-?-), (-/-), (-=-), (-&-)
+  , query
+  , as
+  , JSONy(..)
+  , XMLy(..)
+  , Pythony(..)
+    -- * Shortcuts
+  , job
+  , build
+  , view
+  , queue
+  , overallLoad
+  , computer
     -- * Rendering
-  , render, slash
+  , render
+  , slash
   ) where
 
 import           Data.ByteString (ByteString)
@@ -91,15 +105,15 @@ text = Text
 int :: Integer -> Method Complete f
 int = fromInteger
 
--- | Append 2 paths
+-- | Combine 2 paths
 (-/-) :: Method Complete f -> Method Complete f -> Method Complete f
 (-/-) = (:~/)
 
--- | Append 2 queries
+-- | Combine 2 queries
 (-&-) :: Method Query f -> Method Query f -> Method Query f
 (-&-) = (:~&)
 
--- | Make a query
+-- | Make a field-value pair
 (-=-) :: Text -> Text -> Method Query f
 x -=- y = x :~= Just y
 
@@ -137,11 +151,11 @@ instance Pythony As where
 instance t ~ Complete => Pythony (Method t) where
   python = "" `as` python
 
--- | Append path and query
+-- | Combine path and query
 (-?-) :: Method Complete f -> Method Query f -> Method Complete f
 (-?-) = (:~?)
 
--- | list-to-query combinator
+-- | List-to-query convenience combinator
 --
 -- >>> render (query [("foo", Nothing), ("bar", Just "baz"), ("quux", Nothing)])
 -- "foo&bar=baz&quux"
@@ -202,7 +216,7 @@ renderFormat AsJSON   = "json"
 renderFormat AsXML    = "xml"
 renderFormat AsPython = "python"
 
--- | Render unicode text as query string
+-- | Render unicode text as a query string
 --
 -- >>> renderText "foo-bar-baz"
 -- "foo-bar-baz"
@@ -215,23 +229,23 @@ renderFormat AsPython = "python"
 renderText :: Text -> ByteString
 renderText = T.encodeUtf8 . T.concatMap (T.pack . escapeURIChar isUnreserved)
 
--- | Insert \"\/\" between two 'String'-like things and concat them.
+-- | Insert \"\/\" between two 'String'-like things and concatenate everything.
 slash :: (IsString m, Monoid m) => m -> m -> m
 slash = insert "/"
 
--- | Insert \"=\" between two 'String'-like things and concat them.
+-- | Insert \"=\" between two 'String'-like things and concatenate everything.
 equals :: (IsString m, Monoid m) => m -> m -> m
 equals = insert "="
 
--- | Insert \"&\" between two 'String'-like things and concat them.
+-- | Insert \"&\" between two 'String'-like things and concatenate everything.
 ampersand :: (IsString m, Monoid m) => m -> m -> m
 ampersand = insert "&"
 
--- | Insert \"?\" between two 'String'-like things and concat them.
+-- | Insert \"?\" between two 'String'-like things and concatenate everything.
 question :: (IsString m, Monoid m) => m -> m -> m
 question = insert "?"
 
--- | Insert 'String'-like thing between two 'String'-like things and concat them.
+-- | Insert 'String'-like thing between two 'String'-like things and concatenate everything.
 --
 -- >>> "foo" `slash` "bar"
 -- "foo/bar"

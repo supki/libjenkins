@@ -14,16 +14,18 @@ module Jenkins.Rest
     -- * Lensy things
   , jenkinsUrl, jenkinsPort, jenkinsUser, jenkinsApiToken, jenkinsPassword
   , _Error, _Disconnect, _Result
-    -- * Misc
+    -- * Type reexports
   , Request, HttpException
   ) where
 
 import Control.Applicative ((<$))
+import Data.Foldable (Foldable, foldr)
 import Control.Lens
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.ByteString.Lazy (ByteString)
 import Data.Monoid (mempty)
 import Network.HTTP.Conduit (Request, HttpException)
+import Prelude hiding (foldr)
 import Text.XML (Document, renderLBS, def)
 
 import Jenkins.Rest.Internal
@@ -38,7 +40,7 @@ get :: Method Complete f -> Jenkins ByteString
 get m = liftJ $ Get m id
 {-# INLINE get #-}
 
--- | @POST@ query (with payload)
+-- | @POST@ query (with a payload)
 post :: (forall f. Method Complete f) -> ByteString -> Jenkins ()
 post m body = liftJ $ Post m body (\_ -> ())
 {-# INLINE post #-}
@@ -60,25 +62,25 @@ io = liftIO
 
 -- | Disconnect from Jenkins
 --
--- Following queries won't be executed
+-- Any following queries won't be executed
 disconnect :: Jenkins a
 disconnect = liftJ Dcon
 {-# INLINE disconnect #-}
 
--- | Make custom local changes to 'Request'
+-- | Make local changes to the 'Request'
 with :: (Request -> Request) -> Jenkins a -> Jenkins a
 with f j = liftJ $ With f j id
 {-# INLINE with #-}
 
 
--- | @POST@ job's @config.xml@ (in @xml-conduit@ format)
+-- | @POST@ job's @config.xml@ (or any other xml, really) in @xml-conduit@ format
 postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
 postXML m =
   with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
 {-# INLINE postXML #-}
 
--- | Do a list of queries 'concurrently'
-concurrentlys :: [Jenkins a] -> Jenkins [a]
+-- | Send a list of queries 'concurrently'
+concurrentlys :: Foldable f => f (Jenkins a) -> Jenkins [a]
 concurrentlys = foldr go (return [])
  where
   go x xs = do
@@ -86,12 +88,16 @@ concurrentlys = foldr go (return [])
     return (y : ys)
 {-# INLINE concurrentlys #-}
 
--- | Do a list of queries 'concurrently' ignoring their results
-concurrentlys_ :: [Jenkins a] -> Jenkins ()
+-- | Send a list of queries 'concurrently' ignoring their results
+--
+-- /Note/: exceptions are still raised
+concurrentlys_ :: Foldable f => f (Jenkins a) -> Jenkins ()
 concurrentlys_ = foldr (\x xs -> () <$ concurrently x xs) (return ())
 {-# INLINE concurrentlys_ #-}
 
 -- | Reload jenkins configuration from disk
+--
+-- Calls @/reload@ and disconnects
 reload :: Jenkins a
 reload = do
   post_ "reload"
@@ -100,14 +106,18 @@ reload = do
 
 -- | Restart jenkins safely
 --
--- Allows all running jobs to complete
+-- Calls @/safeRestart@ and disconnects
+--
+-- @/safeRestart@ allows all running jobs to complete
 restart :: Jenkins a
 restart = do
   post_ "safeRestart"
   disconnect
 {-# INLINE restart #-}
 
--- | Force jenkins to restart without waiting running jobs to finish
+-- | Force jenkins to restart without waiting for running jobs to finish
+--
+-- Calls @/restart@ and disconnects
 forceRestart :: Jenkins a
 forceRestart = do
   post_ "restart"
