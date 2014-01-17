@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns #-}
 -- | Discover Jenkins on the network
 module Jenkins.Discover
   ( Discover(..)
@@ -11,7 +10,7 @@ module Jenkins.Discover
   ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
-import           Control.Lens
+import           Control.Lens hiding (element)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
@@ -21,8 +20,8 @@ import           Network.BSD
 import           Network.Socket
 import           Network.Socket.ByteString as B
 import           System.Timeout (timeout)
-import qualified Text.XML as X
-import qualified Text.XML.Lens as X
+import           Text.XML
+import           Text.XML.Cursor
 
 {-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
 
@@ -80,13 +79,11 @@ readAnswer s = fst <$> B.recvFrom s 4096
 -- </hudson>
 -- @
 parse :: ByteString -> Maybe Discover
-parse (X.parseLBS X.def . BL.fromStrict -> bs) = case bs of
-  Left  _      -> Nothing
-  Right parsed ->
-    let v = parsed^?deeper.X.el "version".content
-        u = parsed^?deeper.X.el "url".content
-        s = parsed^?deeper.X.el "server-id".content
-    in Discover <$> v <*> u <*> pure s
- where
-  content = X.nodes.traverse.X._Content
-  deeper  = X.root.X.nodes.traverse.X._Element
+parse bs = either (const Nothing) Just (parseLBS def (BL.fromStrict bs)) >>= \doc ->
+  let
+    cursor = fromDocument doc
+    tag t  = preview _head (cursor $/ element t &// content)
+  in Discover
+    <$> tag "version"
+    <*> tag "url"
+    <*> pure (tag "server-id")

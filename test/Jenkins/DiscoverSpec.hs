@@ -20,3 +20,15 @@ spec =
         response = "<hudson><version>foo</version><url>bar</url></hudson>"
       in
         parse response `shouldBe` Just (Discover "foo" "bar" Nothing)
+
+    it "does not parse Jenkins xml response without the version tag" $
+      let
+        response = "<hudson><url>bar</url></hudson>"
+      in
+        parse response `shouldBe` Nothing
+
+    it "does not parse Jenkins xml response without the url tag" $
+      let
+        response = "<hudson><version>foo</version></hudson>"
+      in
+        parse response `shouldBe` Nothing
