@@ -5,8 +5,8 @@ module Main (main) where
 
 import           Control.Lens                              -- lens
 import           Control.Exception.Lens                    -- lens
-import           Control.Lens.Aeson (key, values, _String) -- lens-aeson
 import           Control.Monad                             -- base
+import           Data.Aeson.Lens (key, values, _String)    -- lens
 import           Data.String (fromString)                  -- base
 import           Data.Text (Text)                          -- text
 import qualified Data.Text as Text                         -- text

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 -- | Discover Jenkins server on the network
-module Main where
+module Main (main) where
 
 import           Data.Monoid ((<>), mempty) -- base
 import           Data.Text (Text)           -- text

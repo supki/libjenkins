@@ -15,8 +15,7 @@ executable grep-jobs
   main-is:           grep-jobs.hs
   build-depends:
       base
-    , lens
-    , lens-aeson    >= 0.1.2
+    , lens       >= 4.0
     , libjenkins
     , process
     , text
@@ -27,8 +26,7 @@ executable jenkins-rename
   build-depends:
       base
     , bytestring
-    , lens
-    , lens-aeson    >= 0.1.2
+    , lens       >= 4.0
     , libjenkins
     , text
 
@@ -46,6 +44,5 @@ executable running-jobs-count
   build-depends:
       base
     , bytestring
-    , lens
-    , lens-aeson    >= 0.1.2
+    , lens       >= 4.0
     , libjenkins

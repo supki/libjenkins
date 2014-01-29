@@ -1,11 +1,11 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | Rename jobs matching supplied pattern
-module Main where
+module Main (main) where
 
 import           Control.Lens                  -- lens
-import           Control.Lens.Aeson            -- lens-aeson
 import           Control.Monad (when)          -- base
+import           Data.Aeson.Lens               -- lens
 import qualified Data.ByteString.Char8 as B    -- bytestring
 import           Data.Foldable (for_)          -- base
 import           Data.Function (fix)           -- base

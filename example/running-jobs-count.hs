@@ -8,7 +8,7 @@
 module Main (main) where
 
 import Control.Lens                      -- lens
-import Control.Lens.Aeson                -- lens-aeson
+import Data.Aeson.Lens                   -- lens
 import Data.ByteString.Lazy (ByteString) -- bytestring
 import Data.String (fromString)          -- bytestring
 import Jenkins.Rest                      -- libjenkins
