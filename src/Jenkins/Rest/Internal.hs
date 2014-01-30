@@ -20,16 +20,17 @@ import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Control (MonadTransControl(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
 import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
+import           Data.ByteString.Lazy (ByteString)
 import           Data.Conduit (ResourceT)
 import           Data.Data (Data, Typeable)
+import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 import           GHC.Generics (Generic)
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (Status(..))
 
 import           Jenkins.Rest.Method
-import qualified Network.HTTP.Conduit.Lens as L
+import qualified Network.HTTP.Conduit.Lens as Lens
 
 
 -- | Jenkins REST API query sequence description
@@ -42,8 +43,8 @@ instance MonadIO Jenkins where
 
 -- | Jenkins REST API query
 data JenkinsF a where
-  Get  :: Method Complete f -> (BL.ByteString -> a) -> JenkinsF a
-  Post :: (forall f. Method Complete f) -> BL.ByteString -> (BL.ByteString -> a) -> JenkinsF a
+  Get  :: Method Complete f -> (ByteString -> a) -> JenkinsF a
+  Post :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JenkinsF a
   Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
   IO   :: IO a -> JenkinsF a
   With :: (Request -> Request) -> Jenkins b -> (b -> a) -> JenkinsF a
@@ -63,6 +64,17 @@ liftJ :: JenkinsF a -> Jenkins a
 liftJ = Jenkins . liftF
 {-# INLINE liftJ #-}
 
+-- | Jenkins connection settings
+--
+-- '_jenkinsApiToken' may be user's password, Jenkins
+-- does not make any distinction between these concepts
+data ConnectInfo = ConnectInfo
+  { _jenkinsUrl      :: String -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
+  , _jenkinsPort     :: Int    -- ^ Jenkins port, e.g. @8080@
+  , _jenkinsUser     :: Text   -- ^ Jenkins user, e.g. @jenkins@
+  , _jenkinsApiToken :: Text   -- ^ Jenkins user API token
+  } deriving (Show, Eq, Typeable, Data, Generic)
+
 -- | The result of Jenkins REST API queries
 data Result e v =
     Error e    -- ^ Exception @e@ was thrown while querying
@@ -81,9 +93,10 @@ runJenkins (ConnectInfo h p user token) jenk =
   fmap result . try . withManager $ \manager -> do
     req <- liftIO $ parseUrl h
     let req' = req
-          & L.port            .~ p
-          & L.responseTimeout .~ Just (20 * 1000000)
-    runReaderT (runMaybeT (iterJenkinsIO manager jenk)) (applyBasicAuth user token req')
+          & Lens.port            .~ p
+          & Lens.responseTimeout .~ Just (20 * 1000000)
+          & applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
+    runReaderT (runMaybeT (iterJenkinsIO manager jenk)) req'
  where
   result :: Either e (Maybe v) -> Result e v
   result (Left e)           = Error e
@@ -135,18 +148,18 @@ interpreter manager = go where
   go (Get m next) = do
     req <- lift ask
     let req' = req
-          & L.path   %~ (`slash` render m)
-          & L.method .~ "GET"
+          & Lens.path   %~ (`slash` render m)
+          & Lens.method .~ "GET"
     bs <- lift . lift $ httpLbs req' manager
     next (responseBody bs)
   go (Post m body next) = do
     req <- lift ask
     let req' = req
-          & L.path          %~ (`slash` render m)
-          & L.method        .~ "POST"
-          & L.requestBody   .~ RequestBodyLBS body
-          & L.redirectCount .~ 0
-          & L.checkStatus   .~ \s@(Status st _) hs cookie_jar ->
+          & Lens.path          %~ (`slash` render m)
+          & Lens.method        .~ "POST"
+          & Lens.requestBody   .~ RequestBodyLBS body
+          & Lens.redirectCount .~ 0
+          & Lens.checkStatus   .~ \s@(Status st _) hs cookie_jar ->
             if 200 <= st && st < 400
                 then Nothing
                 else Just . toException $ StatusCodeException s hs cookie_jar
@@ -168,17 +181,6 @@ interpreter manager = go where
     next res
   go Dcon = mzero
 
-
--- | Jenkins connection settings
---
--- '_jenkinsApiToken' may be user's password, Jenkins
--- does not make any distinction between these concepts
-data ConnectInfo = ConnectInfo
-  { _jenkinsUrl      :: String       -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
-  , _jenkinsPort     :: Int          -- ^ Jenkins port, e.g. @8080@
-  , _jenkinsUser     :: B.ByteString -- ^ Jenkins user, e.g. @jenkins@
-  , _jenkinsApiToken :: B.ByteString -- ^ Jenkins user API token
-  } deriving (Show, Eq, Typeable, Data, Generic)
 
 -- | Default Jenkins connection settings
 --
@@ -209,12 +211,12 @@ jenkinsPort f req = (\p' -> req { _jenkinsPort = p' }) <$> f (_jenkinsPort req)
 {-# INLINE jenkinsPort #-}
 
 -- | A lens into Jenkins user
-jenkinsUser :: Lens' ConnectInfo B.ByteString
+jenkinsUser :: Lens' ConnectInfo Text
 jenkinsUser f req = (\u' -> req { _jenkinsUser = u' }) <$> f (_jenkinsUser req)
 {-# INLINE jenkinsUser #-}
 
 -- | A lens into Jenkins user API token
-jenkinsApiToken :: Lens' ConnectInfo B.ByteString
+jenkinsApiToken :: Lens' ConnectInfo Text
 jenkinsApiToken f req = (\a' -> req { _jenkinsApiToken = a' }) <$> f (_jenkinsApiToken req)
 {-# INLINE jenkinsApiToken #-}
 
@@ -223,6 +225,6 @@ jenkinsApiToken f req = (\a' -> req { _jenkinsApiToken = a' }) <$> f (_jenkinsAp
 -- @
 -- jenkinsPassword = jenkinsApiToken
 -- @
-jenkinsPassword :: Lens' ConnectInfo B.ByteString
+jenkinsPassword :: Lens' ConnectInfo Text
 jenkinsPassword = jenkinsApiToken
 {-# INLINE jenkinsPassword #-}

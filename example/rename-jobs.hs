@@ -6,12 +6,12 @@ module Main (main) where
 import           Control.Lens                  -- lens
 import           Control.Monad (when)          -- base
 import           Data.Aeson.Lens               -- lens
-import qualified Data.ByteString.Char8 as B    -- bytestring
 import           Data.Foldable (for_)          -- base
 import           Data.Function (fix)           -- base
+import           Data.String (fromString)      -- base
 import           Data.Text (Text)              -- text
-import qualified Data.Text as T                -- text
-import qualified Data.Text.IO as T             -- text
+import qualified Data.Text as Text             -- text
+import qualified Data.Text.IO as Text          -- text
 import           Jenkins.Rest                  -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
@@ -32,10 +32,10 @@ main :: IO ()
 main = do
   -- more useful help on error
   host:port:user:pass:o:n:_ <- getArgs
-  let opts = Options (ConnectInfo host (read port) (B.pack user) (B.pack pass)) (T.pack o) (T.pack n)
+  let opts = Options (ConnectInfo host (read port) (fromString user) (fromString pass)) (fromString o) (fromString n)
   res <- rename opts
   case res of
-    Result _ -> T.putStrLn "Done."
+    Result _ -> Text.putStrLn "Done."
     -- disconnected for some reason
     Disconnect -> die "disconnect!"
     -- something bad happened, show it!
@@ -54,19 +54,19 @@ rename (Options { settings, old, new }) = runJenkins settings $ do
   for_ jobs rename_job
  where
   rename_job :: Text -> Jenkins ()
-  rename_job name = when (old `T.isInfixOf` name) $ do
-    let name' = (old `T.replace` new) name
+  rename_job name = when (old `Text.isInfixOf` name) $ do
+    let name' = (old `Text.replace` new) name
     -- prompt for every matching job
-    yes <- prompt $ T.unwords ["Rename", name, "to", name', "? [y/n]"]
+    yes <- prompt $ Text.unwords ["Rename", name, "to", name', "? [y/n]"]
     when yes $
       -- if user agrees then voodoo comes
       post_ (job name -/- "doRename" -?- "newName" -=- name')
 
   -- asks user until she enters 'y' or 'n'
   prompt message = io . fix $ \loop -> do
-    T.putStrLn message
-    res <- T.getLine
-    case T.toUpper res of
+    Text.putStrLn message
+    res <- Text.getLine
+    case Text.toUpper res of
       "Y" -> return True
       "N" -> return False
       _   -> loop
