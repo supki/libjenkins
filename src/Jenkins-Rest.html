@@ -23,104 +23,114 @@
 <a name="line-14"></a>    <span class='hs-comment'>-- * Lensy things</span>
 <a name="line-15"></a>  <span class='hs-layout'>,</span> <span class='hs-varid'>jenkinsUrl</span><span class='hs-layout'>,</span> <span class='hs-varid'>jenkinsPort</span><span class='hs-layout'>,</span> <span class='hs-varid'>jenkinsUser</span><span class='hs-layout'>,</span> <span class='hs-varid'>jenkinsApiToken</span><span class='hs-layout'>,</span> <span class='hs-varid'>jenkinsPassword</span>
 <a name="line-16"></a>  <span class='hs-layout'>,</span> <span class='hs-sel'>_Error</span><span class='hs-layout'>,</span> <span class='hs-sel'>_Disconnect</span><span class='hs-layout'>,</span> <span class='hs-sel'>_Result</span>
-<a name="line-17"></a>    <span class='hs-comment'>-- * Misc</span>
+<a name="line-17"></a>    <span class='hs-comment'>-- * Type reexports</span>
 <a name="line-18"></a>  <span class='hs-layout'>,</span> <span class='hs-conid'>Request</span><span class='hs-layout'>,</span> <span class='hs-conid'>HttpException</span>
 <a name="line-19"></a>  <span class='hs-layout'>)</span> <span class='hs-keyword'>where</span>
 <a name="line-20"></a>
 <a name="line-21"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Applicative</span> <span class='hs-layout'>(</span><span class='hs-layout'>(</span><span class='hs-varop'>&lt;$</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-22"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Lens</span>
-<a name="line-23"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Monad</span><span class='hs-varop'>.</span><span class='hs-conid'>IO</span><span class='hs-varop'>.</span><span class='hs-conid'>Class</span> <span class='hs-layout'>(</span><span class='hs-conid'>MonadIO</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
-<a name="line-24"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>ByteString</span><span class='hs-varop'>.</span><span class='hs-conid'>Lazy</span> <span class='hs-layout'>(</span><span class='hs-conid'>ByteString</span><span class='hs-layout'>)</span>
-<a name="line-25"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Monoid</span> <span class='hs-layout'>(</span><span class='hs-varid'>mempty</span><span class='hs-layout'>)</span>
-<a name="line-26"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Network</span><span class='hs-varop'>.</span><span class='hs-conid'>HTTP</span><span class='hs-varop'>.</span><span class='hs-conid'>Conduit</span> <span class='hs-layout'>(</span><span class='hs-conid'>Request</span><span class='hs-layout'>,</span> <span class='hs-conid'>HttpException</span><span class='hs-layout'>)</span>
-<a name="line-27"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Text</span><span class='hs-varop'>.</span><span class='hs-conid'>XML</span> <span class='hs-layout'>(</span><span class='hs-conid'>Document</span><span class='hs-layout'>,</span> <span class='hs-varid'>renderLBS</span><span class='hs-layout'>,</span> <span class='hs-varid'>def</span><span class='hs-layout'>)</span>
-<a name="line-28"></a>
-<a name="line-29"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Jenkins</span><span class='hs-varop'>.</span><span class='hs-conid'>Rest</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
-<a name="line-30"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Jenkins</span><span class='hs-varop'>.</span><span class='hs-conid'>Rest</span><span class='hs-varop'>.</span><span class='hs-conid'>Method</span>
-<a name="line-31"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Network</span><span class='hs-varop'>.</span><span class='hs-conid'>HTTP</span><span class='hs-varop'>.</span><span class='hs-conid'>Conduit</span><span class='hs-varop'>.</span><span class='hs-conid'>Lens</span>
-<a name="line-32"></a>
-<a name="line-33"></a><span class='hs-comment'>{-# ANN module ("HLint: ignore Use const" :: String) #-}</span>
+<a name="line-22"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Foldable</span> <span class='hs-layout'>(</span><span class='hs-conid'>Foldable</span><span class='hs-layout'>,</span> <span class='hs-varid'>foldr</span><span class='hs-layout'>)</span>
+<a name="line-23"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Lens</span>
+<a name="line-24"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Monad</span><span class='hs-varop'>.</span><span class='hs-conid'>IO</span><span class='hs-varop'>.</span><span class='hs-conid'>Class</span> <span class='hs-layout'>(</span><span class='hs-conid'>MonadIO</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
+<a name="line-25"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>ByteString</span><span class='hs-varop'>.</span><span class='hs-conid'>Lazy</span> <span class='hs-layout'>(</span><span class='hs-conid'>ByteString</span><span class='hs-layout'>)</span>
+<a name="line-26"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Monoid</span> <span class='hs-layout'>(</span><span class='hs-varid'>mempty</span><span class='hs-layout'>)</span>
+<a name="line-27"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Network</span><span class='hs-varop'>.</span><span class='hs-conid'>HTTP</span><span class='hs-varop'>.</span><span class='hs-conid'>Conduit</span> <span class='hs-layout'>(</span><span class='hs-conid'>Request</span><span class='hs-layout'>,</span> <span class='hs-conid'>HttpException</span><span class='hs-layout'>)</span>
+<a name="line-28"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Prelude</span> <span class='hs-varid'>hiding</span> <span class='hs-layout'>(</span><span class='hs-varid'>foldr</span><span class='hs-layout'>)</span>
+<a name="line-29"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Text</span><span class='hs-varop'>.</span><span class='hs-conid'>XML</span> <span class='hs-layout'>(</span><span class='hs-conid'>Document</span><span class='hs-layout'>,</span> <span class='hs-varid'>renderLBS</span><span class='hs-layout'>,</span> <span class='hs-varid'>def</span><span class='hs-layout'>)</span>
+<a name="line-30"></a>
+<a name="line-31"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Jenkins</span><span class='hs-varop'>.</span><span class='hs-conid'>Rest</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
+<a name="line-32"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Jenkins</span><span class='hs-varop'>.</span><span class='hs-conid'>Rest</span><span class='hs-varop'>.</span><span class='hs-conid'>Method</span>
+<a name="line-33"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Network</span><span class='hs-varop'>.</span><span class='hs-conid'>HTTP</span><span class='hs-varop'>.</span><span class='hs-conid'>Conduit</span><span class='hs-varop'>.</span><span class='hs-conid'>Lens</span>
 <a name="line-34"></a>
-<a name="line-35"></a>
-<a name="line-36"></a><a name="get"></a><span class='hs-comment'>-- | @GET@ query</span>
-<a name="line-37"></a><span class='hs-definition'>get</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>ByteString</span>
-<a name="line-38"></a><span class='hs-definition'>get</span> <span class='hs-varid'>m</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>Get</span> <span class='hs-varid'>m</span> <span class='hs-varid'>id</span>
-<a name="line-39"></a><span class='hs-comment'>{-# INLINE get #-}</span>
-<a name="line-40"></a>
-<a name="line-41"></a><a name="post"></a><span class='hs-comment'>-- | @POST@ query (with payload)</span>
-<a name="line-42"></a><span class='hs-definition'>post</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-keyword'>forall</span> <span class='hs-varid'>f</span><span class='hs-varop'>.</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ByteString</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
-<a name="line-43"></a><span class='hs-definition'>post</span> <span class='hs-varid'>m</span> <span class='hs-varid'>body</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>Post</span> <span class='hs-varid'>m</span> <span class='hs-varid'>body</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-keyword'>_</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>()</span><span class='hs-layout'>)</span>
-<a name="line-44"></a><span class='hs-comment'>{-# INLINE post #-}</span>
-<a name="line-45"></a>
-<a name="line-46"></a><a name="post_"></a><span class='hs-comment'>-- | @POST@ query (without payload)</span>
-<a name="line-47"></a><span class='hs-definition'>post_</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-keyword'>forall</span> <span class='hs-varid'>f</span><span class='hs-varop'>.</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
-<a name="line-48"></a><span class='hs-definition'>post_</span> <span class='hs-varid'>m</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>post</span> <span class='hs-varid'>m</span> <span class='hs-varid'>mempty</span>
-<a name="line-49"></a><span class='hs-comment'>{-# INLINE post_ #-}</span>
-<a name="line-50"></a>
-<a name="line-51"></a><a name="concurrently"></a><span class='hs-comment'>-- | Do both queries 'concurrently'</span>
-<a name="line-52"></a><span class='hs-definition'>concurrently</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>b</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span>
-<a name="line-53"></a><span class='hs-definition'>concurrently</span> <span class='hs-varid'>ja</span> <span class='hs-varid'>jb</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>Conc</span> <span class='hs-varid'>ja</span> <span class='hs-varid'>jb</span> <span class='hs-conid'>(,)</span>
-<a name="line-54"></a><span class='hs-comment'>{-# INLINE concurrently #-}</span>
-<a name="line-55"></a>
-<a name="line-56"></a><a name="io"></a><span class='hs-comment'>-- | Lift arbitrary 'IO' action</span>
-<a name="line-57"></a><span class='hs-definition'>io</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
-<a name="line-58"></a><span class='hs-definition'>io</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftIO</span>
-<a name="line-59"></a><span class='hs-comment'>{-# INLINE io #-}</span>
-<a name="line-60"></a>
-<a name="line-61"></a><a name="disconnect"></a><span class='hs-comment'>-- | Disconnect from Jenkins</span>
-<a name="line-62"></a><span class='hs-comment'>--</span>
-<a name="line-63"></a><span class='hs-comment'>-- Following queries won't be executed</span>
-<a name="line-64"></a><span class='hs-definition'>disconnect</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
-<a name="line-65"></a><span class='hs-definition'>disconnect</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-conid'>Dcon</span>
-<a name="line-66"></a><span class='hs-comment'>{-# INLINE disconnect #-}</span>
-<a name="line-67"></a>
-<a name="line-68"></a><a name="with"></a><span class='hs-comment'>-- | Make custom local changes to 'Request'</span>
-<a name="line-69"></a><span class='hs-definition'>with</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Request</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Request</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
-<a name="line-70"></a><span class='hs-definition'>with</span> <span class='hs-varid'>f</span> <span class='hs-varid'>j</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>With</span> <span class='hs-varid'>f</span> <span class='hs-varid'>j</span> <span class='hs-varid'>id</span>
-<a name="line-71"></a><span class='hs-comment'>{-# INLINE with #-}</span>
-<a name="line-72"></a>
-<a name="line-73"></a>
-<a name="line-74"></a><a name="postXML"></a><span class='hs-comment'>-- | @POST@ job's @config.xml@ (in @xml-conduit@ format)</span>
-<a name="line-75"></a><span class='hs-definition'>postXML</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-keyword'>forall</span> <span class='hs-varid'>f</span><span class='hs-varop'>.</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Document</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
-<a name="line-76"></a><span class='hs-definition'>postXML</span> <span class='hs-varid'>m</span> <span class='hs-keyglyph'>=</span>
-<a name="line-77"></a>  <span class='hs-varid'>with</span> <span class='hs-layout'>(</span><span class='hs-varid'>requestHeaders</span> <span class='hs-varop'>&lt;&gt;~</span> <span class='hs-keyglyph'>[</span><span class='hs-layout'>(</span><span class='hs-str'>"Content-Type"</span><span class='hs-layout'>,</span> <span class='hs-str'>"text/xml"</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>post</span> <span class='hs-varid'>m</span> <span class='hs-varop'>.</span> <span class='hs-varid'>renderLBS</span> <span class='hs-varid'>def</span>
-<a name="line-78"></a><span class='hs-comment'>{-# INLINE postXML #-}</span>
-<a name="line-79"></a>
-<a name="line-80"></a><a name="concurrentlys"></a><span class='hs-comment'>-- | Do a list of queries 'concurrently'</span>
-<a name="line-81"></a><span class='hs-definition'>concurrentlys</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
-<a name="line-82"></a><span class='hs-definition'>concurrentlys</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>foldr</span> <span class='hs-varid'>go</span> <span class='hs-layout'>(</span><span class='hs-varid'>return</span> <span class='hs-conid'>[]</span><span class='hs-layout'>)</span>
-<a name="line-83"></a> <span class='hs-keyword'>where</span>
-<a name="line-84"></a>  <span class='hs-varid'>go</span> <span class='hs-varid'>x</span> <span class='hs-varid'>xs</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
-<a name="line-85"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>y</span><span class='hs-layout'>,</span> <span class='hs-varid'>ys</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>concurrently</span> <span class='hs-varid'>x</span> <span class='hs-varid'>xs</span>
-<a name="line-86"></a>    <span class='hs-varid'>return</span> <span class='hs-layout'>(</span><span class='hs-varid'>y</span> <span class='hs-conop'>:</span> <span class='hs-varid'>ys</span><span class='hs-layout'>)</span>
-<a name="line-87"></a><span class='hs-comment'>{-# INLINE concurrentlys #-}</span>
-<a name="line-88"></a>
-<a name="line-89"></a><a name="concurrentlys_"></a><span class='hs-comment'>-- | Do a list of queries 'concurrently' ignoring their results</span>
-<a name="line-90"></a><span class='hs-definition'>concurrentlys_</span> <span class='hs-keyglyph'>::</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
-<a name="line-91"></a><span class='hs-definition'>concurrentlys_</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>foldr</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-varid'>x</span> <span class='hs-varid'>xs</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>()</span> <span class='hs-varop'>&lt;$</span> <span class='hs-varid'>concurrently</span> <span class='hs-varid'>x</span> <span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-varid'>return</span> <span class='hs-conid'>()</span><span class='hs-layout'>)</span>
-<a name="line-92"></a><span class='hs-comment'>{-# INLINE concurrentlys_ #-}</span>
-<a name="line-93"></a>
-<a name="line-94"></a><a name="reload"></a><span class='hs-comment'>-- | Reload jenkins configuration from disk</span>
-<a name="line-95"></a><span class='hs-definition'>reload</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
-<a name="line-96"></a><span class='hs-definition'>reload</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
-<a name="line-97"></a>  <span class='hs-varid'>post_</span> <span class='hs-str'>"reload"</span>
-<a name="line-98"></a>  <span class='hs-varid'>disconnect</span>
-<a name="line-99"></a><span class='hs-comment'>{-# INLINE reload #-}</span>
-<a name="line-100"></a>
-<a name="line-101"></a><a name="restart"></a><span class='hs-comment'>-- | Restart jenkins safely</span>
-<a name="line-102"></a><span class='hs-comment'>--</span>
-<a name="line-103"></a><span class='hs-comment'>-- Allows all running jobs to complete</span>
-<a name="line-104"></a><span class='hs-definition'>restart</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
-<a name="line-105"></a><span class='hs-definition'>restart</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
-<a name="line-106"></a>  <span class='hs-varid'>post_</span> <span class='hs-str'>"safeRestart"</span>
-<a name="line-107"></a>  <span class='hs-varid'>disconnect</span>
-<a name="line-108"></a><span class='hs-comment'>{-# INLINE restart #-}</span>
-<a name="line-109"></a>
-<a name="line-110"></a><a name="forceRestart"></a><span class='hs-comment'>-- | Force jenkins to restart without waiting running jobs to finish</span>
-<a name="line-111"></a><span class='hs-definition'>forceRestart</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
-<a name="line-112"></a><span class='hs-definition'>forceRestart</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
-<a name="line-113"></a>  <span class='hs-varid'>post_</span> <span class='hs-str'>"restart"</span>
-<a name="line-114"></a>  <span class='hs-varid'>disconnect</span>
-<a name="line-115"></a><span class='hs-comment'>{-# INLINE forceRestart #-}</span>
+<a name="line-35"></a><span class='hs-comment'>{-# ANN module ("HLint: ignore Use const" :: String) #-}</span>
+<a name="line-36"></a>
+<a name="line-37"></a>
+<a name="line-38"></a><a name="get"></a><span class='hs-comment'>-- | @GET@ query</span>
+<a name="line-39"></a><span class='hs-definition'>get</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>ByteString</span>
+<a name="line-40"></a><span class='hs-definition'>get</span> <span class='hs-varid'>m</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>Get</span> <span class='hs-varid'>m</span> <span class='hs-varid'>id</span>
+<a name="line-41"></a><span class='hs-comment'>{-# INLINE get #-}</span>
+<a name="line-42"></a>
+<a name="line-43"></a><a name="post"></a><span class='hs-comment'>-- | @POST@ query (with a payload)</span>
+<a name="line-44"></a><span class='hs-definition'>post</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-keyword'>forall</span> <span class='hs-varid'>f</span><span class='hs-varop'>.</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ByteString</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
+<a name="line-45"></a><span class='hs-definition'>post</span> <span class='hs-varid'>m</span> <span class='hs-varid'>body</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>Post</span> <span class='hs-varid'>m</span> <span class='hs-varid'>body</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-keyword'>_</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>()</span><span class='hs-layout'>)</span>
+<a name="line-46"></a><span class='hs-comment'>{-# INLINE post #-}</span>
+<a name="line-47"></a>
+<a name="line-48"></a><a name="post_"></a><span class='hs-comment'>-- | @POST@ query (without payload)</span>
+<a name="line-49"></a><span class='hs-definition'>post_</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-keyword'>forall</span> <span class='hs-varid'>f</span><span class='hs-varop'>.</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
+<a name="line-50"></a><span class='hs-definition'>post_</span> <span class='hs-varid'>m</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>post</span> <span class='hs-varid'>m</span> <span class='hs-varid'>mempty</span>
+<a name="line-51"></a><span class='hs-comment'>{-# INLINE post_ #-}</span>
+<a name="line-52"></a>
+<a name="line-53"></a><a name="concurrently"></a><span class='hs-comment'>-- | Do both queries 'concurrently'</span>
+<a name="line-54"></a><span class='hs-definition'>concurrently</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>b</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-layout'>(</span><span class='hs-varid'>a</span><span class='hs-layout'>,</span> <span class='hs-varid'>b</span><span class='hs-layout'>)</span>
+<a name="line-55"></a><span class='hs-definition'>concurrently</span> <span class='hs-varid'>ja</span> <span class='hs-varid'>jb</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>Conc</span> <span class='hs-varid'>ja</span> <span class='hs-varid'>jb</span> <span class='hs-conid'>(,)</span>
+<a name="line-56"></a><span class='hs-comment'>{-# INLINE concurrently #-}</span>
+<a name="line-57"></a>
+<a name="line-58"></a><a name="io"></a><span class='hs-comment'>-- | Lift arbitrary 'IO' action</span>
+<a name="line-59"></a><span class='hs-definition'>io</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>IO</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
+<a name="line-60"></a><span class='hs-definition'>io</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftIO</span>
+<a name="line-61"></a><span class='hs-comment'>{-# INLINE io #-}</span>
+<a name="line-62"></a>
+<a name="line-63"></a><a name="disconnect"></a><span class='hs-comment'>-- | Disconnect from Jenkins</span>
+<a name="line-64"></a><span class='hs-comment'>--</span>
+<a name="line-65"></a><span class='hs-comment'>-- Any following queries won't be executed</span>
+<a name="line-66"></a><span class='hs-definition'>disconnect</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
+<a name="line-67"></a><span class='hs-definition'>disconnect</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-conid'>Dcon</span>
+<a name="line-68"></a><span class='hs-comment'>{-# INLINE disconnect #-}</span>
+<a name="line-69"></a>
+<a name="line-70"></a><a name="with"></a><span class='hs-comment'>-- | Make local changes to the 'Request'</span>
+<a name="line-71"></a><span class='hs-definition'>with</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-conid'>Request</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Request</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
+<a name="line-72"></a><span class='hs-definition'>with</span> <span class='hs-varid'>f</span> <span class='hs-varid'>j</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>liftJ</span> <span class='hs-varop'>$</span> <span class='hs-conid'>With</span> <span class='hs-varid'>f</span> <span class='hs-varid'>j</span> <span class='hs-varid'>id</span>
+<a name="line-73"></a><span class='hs-comment'>{-# INLINE with #-}</span>
+<a name="line-74"></a>
+<a name="line-75"></a>
+<a name="line-76"></a><a name="postXML"></a><span class='hs-comment'>-- | @POST@ job's @config.xml@ (or any other xml, really) in @xml-conduit@ format</span>
+<a name="line-77"></a><span class='hs-definition'>postXML</span> <span class='hs-keyglyph'>::</span> <span class='hs-layout'>(</span><span class='hs-keyword'>forall</span> <span class='hs-varid'>f</span><span class='hs-varop'>.</span> <span class='hs-conid'>Method</span> <span class='hs-conid'>Complete</span> <span class='hs-varid'>f</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Document</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
+<a name="line-78"></a><span class='hs-definition'>postXML</span> <span class='hs-varid'>m</span> <span class='hs-keyglyph'>=</span>
+<a name="line-79"></a>  <span class='hs-varid'>with</span> <span class='hs-layout'>(</span><span class='hs-varid'>requestHeaders</span> <span class='hs-varop'>&lt;&gt;~</span> <span class='hs-keyglyph'>[</span><span class='hs-layout'>(</span><span class='hs-str'>"Content-Type"</span><span class='hs-layout'>,</span> <span class='hs-str'>"text/xml"</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-varop'>.</span> <span class='hs-varid'>post</span> <span class='hs-varid'>m</span> <span class='hs-varop'>.</span> <span class='hs-varid'>renderLBS</span> <span class='hs-varid'>def</span>
+<a name="line-80"></a><span class='hs-comment'>{-# INLINE postXML #-}</span>
+<a name="line-81"></a>
+<a name="line-82"></a><a name="concurrentlys"></a><span class='hs-comment'>-- | Send a list of queries 'concurrently'</span>
+<a name="line-83"></a><span class='hs-definition'>concurrentlys</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Foldable</span> <span class='hs-varid'>f</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>f</span> <span class='hs-layout'>(</span><span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>a</span><span class='hs-keyglyph'>]</span>
+<a name="line-84"></a><span class='hs-definition'>concurrentlys</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>foldr</span> <span class='hs-varid'>go</span> <span class='hs-layout'>(</span><span class='hs-varid'>return</span> <span class='hs-conid'>[]</span><span class='hs-layout'>)</span>
+<a name="line-85"></a> <span class='hs-keyword'>where</span>
+<a name="line-86"></a>  <span class='hs-varid'>go</span> <span class='hs-varid'>x</span> <span class='hs-varid'>xs</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
+<a name="line-87"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>y</span><span class='hs-layout'>,</span> <span class='hs-varid'>ys</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>concurrently</span> <span class='hs-varid'>x</span> <span class='hs-varid'>xs</span>
+<a name="line-88"></a>    <span class='hs-varid'>return</span> <span class='hs-layout'>(</span><span class='hs-varid'>y</span> <span class='hs-conop'>:</span> <span class='hs-varid'>ys</span><span class='hs-layout'>)</span>
+<a name="line-89"></a><span class='hs-comment'>{-# INLINE concurrentlys #-}</span>
+<a name="line-90"></a>
+<a name="line-91"></a><a name="concurrentlys_"></a><span class='hs-comment'>-- | Send a list of queries 'concurrently' ignoring their results</span>
+<a name="line-92"></a><span class='hs-comment'>--</span>
+<a name="line-93"></a><span class='hs-comment'>-- /Note/: exceptions are still raised</span>
+<a name="line-94"></a><span class='hs-definition'>concurrentlys_</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Foldable</span> <span class='hs-varid'>f</span> <span class='hs-keyglyph'>=&gt;</span> <span class='hs-varid'>f</span> <span class='hs-layout'>(</span><span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Jenkins</span> <span class='hs-conid'>()</span>
+<a name="line-95"></a><span class='hs-definition'>concurrentlys_</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>foldr</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-varid'>x</span> <span class='hs-varid'>xs</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>()</span> <span class='hs-varop'>&lt;$</span> <span class='hs-varid'>concurrently</span> <span class='hs-varid'>x</span> <span class='hs-varid'>xs</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-varid'>return</span> <span class='hs-conid'>()</span><span class='hs-layout'>)</span>
+<a name="line-96"></a><span class='hs-comment'>{-# INLINE concurrentlys_ #-}</span>
+<a name="line-97"></a>
+<a name="line-98"></a><a name="reload"></a><span class='hs-comment'>-- | Reload jenkins configuration from disk</span>
+<a name="line-99"></a><span class='hs-comment'>--</span>
+<a name="line-100"></a><span class='hs-comment'>-- Calls @/reload@ and disconnects</span>
+<a name="line-101"></a><span class='hs-definition'>reload</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
+<a name="line-102"></a><span class='hs-definition'>reload</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
+<a name="line-103"></a>  <span class='hs-varid'>post_</span> <span class='hs-str'>"reload"</span>
+<a name="line-104"></a>  <span class='hs-varid'>disconnect</span>
+<a name="line-105"></a><span class='hs-comment'>{-# INLINE reload #-}</span>
+<a name="line-106"></a>
+<a name="line-107"></a><a name="restart"></a><span class='hs-comment'>-- | Restart jenkins safely</span>
+<a name="line-108"></a><span class='hs-comment'>--</span>
+<a name="line-109"></a><span class='hs-comment'>-- Calls @/safeRestart@ and disconnects</span>
+<a name="line-110"></a><span class='hs-comment'>--</span>
+<a name="line-111"></a><span class='hs-comment'>-- @/safeRestart@ allows all running jobs to complete</span>
+<a name="line-112"></a><span class='hs-definition'>restart</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
+<a name="line-113"></a><span class='hs-definition'>restart</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
+<a name="line-114"></a>  <span class='hs-varid'>post_</span> <span class='hs-str'>"safeRestart"</span>
+<a name="line-115"></a>  <span class='hs-varid'>disconnect</span>
+<a name="line-116"></a><span class='hs-comment'>{-# INLINE restart #-}</span>
+<a name="line-117"></a>
+<a name="line-118"></a><a name="forceRestart"></a><span class='hs-comment'>-- | Force jenkins to restart without waiting for running jobs to finish</span>
+<a name="line-119"></a><span class='hs-comment'>--</span>
+<a name="line-120"></a><span class='hs-comment'>-- Calls @/restart@ and disconnects</span>
+<a name="line-121"></a><span class='hs-definition'>forceRestart</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>Jenkins</span> <span class='hs-varid'>a</span>
+<a name="line-122"></a><span class='hs-definition'>forceRestart</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
+<a name="line-123"></a>  <span class='hs-varid'>post_</span> <span class='hs-str'>"restart"</span>
+<a name="line-124"></a>  <span class='hs-varid'>disconnect</span>
+<a name="line-125"></a><span class='hs-comment'>{-# INLINE forceRestart #-}</span>
 </pre></body>
 </html>
