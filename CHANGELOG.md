@@ -1,3 +1,10 @@
+0.4.0.0
+=======
+
+  * Use `Text` for username and API token (password)
+
+  * Support `lens-4.0`
+
 0.3.0.0
 =======
 

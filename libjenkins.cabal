@@ -1,5 +1,5 @@
 name:                libjenkins
-version:             0.3.0.0
+version:             0.4.0.0
 synopsis:            Jenkins API interface
 description:         Jenkins API interface. It supports REST and Discovery APIs
 license:             BSD3
@@ -18,6 +18,15 @@ extra-source-files:
   example/discover.hs
   example/running-jobs-count.hs
 cabal-version:       >= 1.10
+
+source-repository head
+  type:     git
+  location: https://github.com/supki/libjenkins
+
+source-repository this
+  type:     git
+  location: https://github.com/supki/libjenkins
+  tag:      0.4.0.0
 
 library
   default-language:  Haskell2010
@@ -82,12 +91,3 @@ test-suite spec
     Jenkins.RestSpec
   cpp-options:
     -DTEST
-
-source-repository head
-  type:     git
-  location: https://github.com/supki/libjenkins
-
-source-repository this
-  type:     git
-  location: https://github.com/supki/libjenkins
-  tag:      0.3.0.0
