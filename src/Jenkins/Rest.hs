@@ -55,8 +55,12 @@ concurrently :: Jenkins a -> Jenkins b -> Jenkins (a, b)
 concurrently ja jb = liftJ $ Conc ja jb (,)
 {-# INLINE concurrently #-}
 
--- | Lift arbitrary 'IO' action
-io :: IO a -> Jenkins a
+-- | Lift an arbitrary 'IO' action to the 'Jenkins' monad
+--
+-- @
+-- io :: 'IO' a -> 'Jenkins' a
+-- @
+io :: MonadIO m => IO a -> m a
 io = liftIO
 {-# INLINE io #-}
 
