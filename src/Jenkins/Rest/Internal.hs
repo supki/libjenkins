@@ -89,19 +89,32 @@ data Result e v =
 -- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
 -- and wraps in 'Error'. Other exceptions are /not/ catched
 runJenkins :: ConnectInfo -> Jenkins a -> IO (Result HttpException a)
-runJenkins (ConnectInfo h p user token) jenk =
-  fmap result . try . withManager $ \manager -> do
+runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkinsInternal conn jenk)
+
+-- | Query Jenkins API using 'Jenkins' description
+--
+-- Successful result is either 'Disconnect' or @ 'Result' v @
+--
+-- No exceptions are catched, i.e.
+--
+-- @
+-- runJenkinsThrowing :: 'ConnectInfo' -> 'Jenkins' a -> 'IO' ('Result' 'Void' a)
+-- @
+--
+-- is perfectly fine—'Result' won't ever be an 'Error'
+runJenkinsThrowing :: ConnectInfo -> Jenkins a -> IO (Result e a)
+runJenkinsThrowing conn jenk = maybe Disconnect Result <$> runJenkinsInternal conn jenk
+
+runJenkinsInternal :: ConnectInfo -> Jenkins a -> IO (Maybe a)
+runJenkinsInternal (ConnectInfo h p user token) jenk =
+  withManager $ \manager -> do
     req <- liftIO $ parseUrl h
     let req' = req
           & Lens.port            .~ p
           & Lens.responseTimeout .~ Just (20 * 1000000)
           & applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
     runReaderT (runMaybeT (iterJenkinsIO manager jenk)) req'
- where
-  result :: Either e (Maybe v) -> Result e v
-  result (Left e)           = Error e
-  result (Right Nothing)    = Disconnect
-  result (Right (Just val)) = Result val
+
 
 -- | A prism into Jenkins error
 _Error :: Prism (Result e a) (Result e' a) e e'

@@ -4,18 +4,41 @@
 -- | Jenkins REST API interface
 module Jenkins.Rest
   ( -- * Query Jenkins
-    runJenkins, ConnectInfo(..), defaultConnectInfo, Jenkins, Result(..)
+    Jenkins
+  , ConnectInfo(..)
+  , defaultConnectInfo
+  , Result(..)
+  , runJenkins
+  , runJenkinsThrowing
     -- ** Combinators
-  , get, post, post_, concurrently, io, disconnect, with
+  , get
+  , post
+  , post_
+  , concurrently
+  , io
+  , disconnect
+  , with
     -- ** Method
   , module Jenkins.Rest.Method
     -- ** Convenience
-  , postXML, concurrentlys, concurrentlys_, reload, restart, forceRestart
-    -- * Lensy things
-  , jenkinsUrl, jenkinsPort, jenkinsUser, jenkinsApiToken, jenkinsPassword
-  , _Error, _Disconnect, _Result
-    -- * Type reexports
-  , Request, HttpException
+  , postXML
+  , concurrentlys
+  , concurrentlys_
+  , reload
+  , restart
+  , forceRestart
+    -- * Optics
+  , jenkinsUrl
+  , jenkinsPort
+  , jenkinsUser
+  , jenkinsApiToken
+  , jenkinsPassword
+  , _Error
+  , _Disconnect
+  , _Result
+    -- * Reexports
+  , Request
+  , HttpException
   ) where
 
 import Control.Applicative ((<$))

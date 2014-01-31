@@ -1,7 +1,9 @@
-0.5.0.0
-=======
+HEAD
+====
 
   * Generalize `io`
+
+  * Add `runJenkinsThrowing`
 
 0.4.0.0
 =======
