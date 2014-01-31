@@ -74,6 +74,7 @@ test-suite spec
     , conduit
     , free
     , hspec
+    , hspec-expectations-lens
     , http-client
     , http-conduit
     , http-types
@@ -89,5 +90,6 @@ test-suite spec
   main-is:           Spec.hs
   other-modules:
     Jenkins.RestSpec
+    Jenkins.Rest.InternalSpec
   cpp-options:
     -DTEST
