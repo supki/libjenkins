@@ -4,8 +4,8 @@ before_install:
  - cabal install cpphs
 
 install:
- - cabal install --enable-tests --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal
+ - cabal install --enable-tests --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal example/jenkins-cli/jenkins-cli.cabal
 
 script:
- - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal
+ - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal example/jenkins-cli/jenkins-cli.cabal
  - cabal sdist
