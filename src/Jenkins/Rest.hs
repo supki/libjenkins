@@ -5,6 +5,7 @@
 module Jenkins.Rest
   ( -- * Query Jenkins
     Jenkins
+  , HasConnectInfo
   , ConnectInfo(..)
   , defaultConnectInfo
   , Result(..)

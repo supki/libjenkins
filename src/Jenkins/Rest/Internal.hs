@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ViewPatterns #-}
 -- | Jenkins REST API interface internals
 module Jenkins.Rest.Internal where
 
@@ -29,7 +30,7 @@ import           GHC.Generics (Generic)
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (Status(..))
 
-import           Jenkins.Rest.Method
+import           Jenkins.Rest.Method (Method, Type(..), render, slash)
 import qualified Network.HTTP.Conduit.Lens as Lens
 
 
@@ -88,7 +89,7 @@ data Result e v =
 --
 -- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
 -- and wraps in 'Error'. Other exceptions are /not/ catched
-runJenkins :: ConnectInfo -> Jenkins a -> IO (Result HttpException a)
+runJenkins :: HasConnectInfo t => t -> Jenkins a -> IO (Result HttpException a)
 runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkinsInternal conn jenk)
 
 -- | Query Jenkins API using 'Jenkins' description
@@ -102,11 +103,11 @@ runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkin
 -- @
 --
 -- is perfectly fine—'Result' won't ever be an 'Error'
-runJenkinsThrowing :: ConnectInfo -> Jenkins a -> IO (Result e a)
+runJenkinsThrowing :: HasConnectInfo t => t -> Jenkins a -> IO (Result e a)
 runJenkinsThrowing conn jenk = maybe Disconnect Result <$> runJenkinsInternal conn jenk
 
-runJenkinsInternal :: ConnectInfo -> Jenkins a -> IO (Maybe a)
-runJenkinsInternal (ConnectInfo h p user token) jenk =
+runJenkinsInternal :: HasConnectInfo t => t -> Jenkins a -> IO (Maybe a)
+runJenkinsInternal (view connectInfo -> ConnectInfo h p user token) jenk =
   withManager $ \manager -> do
     req <- liftIO $ parseUrl h
     let req' = req
@@ -213,24 +214,52 @@ defaultConnectInfo = ConnectInfo
   , _jenkinsApiToken = ""
   }
 
+-- | Convenience class aimed at elimination of long
+-- chains of lenses to access jenkins connection configuration
+--
+-- For example, if you have a configuration record in your application:
+--
+-- @
+-- data Config = Config
+--   { ...
+--   , _jenkinsConnectInfo :: ConnectInfo
+--   , ...
+--   }
+-- @
+--
+-- you can make it an instance of 'HasConnectInfo':
+--
+-- @
+-- instance HasConnectInfo Config where
+--   connectInfo f x = (\p -> x { _jenkinsConnectInfo = p }) \<$\> f (_jenkinsConnectInfo x)
+-- @
+--
+-- and then use e.g. @view jenkinsUrl config@ to get the url part of the jenkins connection
+class HasConnectInfo t where
+  connectInfo :: Lens' t ConnectInfo
+
+instance HasConnectInfo ConnectInfo where
+  connectInfo = id
+  {-# INLINE connectInfo #-}
+
 -- | A lens into Jenkins URL
-jenkinsUrl :: Lens' ConnectInfo String
-jenkinsUrl f req = (\u' -> req { _jenkinsUrl = u' }) <$> f (_jenkinsUrl req)
+jenkinsUrl :: HasConnectInfo t => Lens' t String
+jenkinsUrl = connectInfo . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
 {-# INLINE jenkinsUrl #-}
 
 -- | A lens into Jenkins port
-jenkinsPort :: Lens' ConnectInfo Int
-jenkinsPort f req = (\p' -> req { _jenkinsPort = p' }) <$> f (_jenkinsPort req)
+jenkinsPort :: HasConnectInfo t => Lens' t Int
+jenkinsPort = connectInfo . \f x -> f (_jenkinsPort x) <&> \p -> x { _jenkinsPort = p }
 {-# INLINE jenkinsPort #-}
 
 -- | A lens into Jenkins user
-jenkinsUser :: Lens' ConnectInfo Text
-jenkinsUser f req = (\u' -> req { _jenkinsUser = u' }) <$> f (_jenkinsUser req)
+jenkinsUser :: HasConnectInfo t => Lens' t Text
+jenkinsUser = connectInfo . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
 {-# INLINE jenkinsUser #-}
 
 -- | A lens into Jenkins user API token
-jenkinsApiToken :: Lens' ConnectInfo Text
-jenkinsApiToken f req = (\a' -> req { _jenkinsApiToken = a' }) <$> f (_jenkinsApiToken req)
+jenkinsApiToken :: HasConnectInfo t => Lens' t Text
+jenkinsApiToken = connectInfo . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
 {-# INLINE jenkinsApiToken #-}
 
 -- | A lens into Jenkins password
@@ -238,6 +267,6 @@ jenkinsApiToken f req = (\a' -> req { _jenkinsApiToken = a' }) <$> f (_jenkinsAp
 -- @
 -- jenkinsPassword = jenkinsApiToken
 -- @
-jenkinsPassword :: Lens' ConnectInfo Text
+jenkinsPassword :: HasConnectInfo t => Lens' t Text
 jenkinsPassword = jenkinsApiToken
 {-# INLINE jenkinsPassword #-}
