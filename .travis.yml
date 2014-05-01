@@ -1,8 +1,5 @@
 language: haskell
 
-before_install:
- - cabal install cpphs
-
 install:
  - cabal install --enable-tests --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal example/jenkins-cli/jenkins-cli.cabal
 
