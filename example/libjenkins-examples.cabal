@@ -1,48 +1,60 @@
 name:                libjenkins-examples
 version:             0.1.0.0
 synopsis:            libjenkins library examples
+description:
+  libjenkins library examples
 license:             BSD3
 license-file:        LICENSE
 author:              Matvey Aksenov
 maintainer:          matvey.aksenov@gmail.com
 category:            Network
 build-type:          Simple
-extra-source-files:  README.md
 cabal-version:       >= 1.10
 
 executable grep-jobs
-  default-language:  Haskell2010
-  main-is:           grep-jobs.hs
+  default-language:
+    Haskell2010
+  main-is:
+    grep-jobs.hs
   build-depends:
-      base
-    , lens       >= 4.0
+      base       >= 4.6     && < 5
+    , lens       >= 4.4
+    , lens-aeson >= 1.0.0.1
     , libjenkins
     , process
     , text
 
 executable jenkins-rename
-  default-language:  Haskell2010
-  main-is:           rename-jobs.hs
+  default-language:
+    Haskell2010
+  main-is:
+    rename-jobs.hs
   build-depends:
-      base
+      base       >= 4.6     && < 5
     , bytestring
-    , lens       >= 4.0
+    , lens       >= 4.4
+    , lens-aeson >= 1.0.0.1
     , libjenkins
     , text
 
 executable jenkins-discover
-  default-language:  Haskell2010
-  main-is:           discover.hs
+  default-language:
+    Haskell2010
   build-depends:
-      base
+      base       >= 4.6     && < 5
     , libjenkins
     , text
+  main-is:
+    discover.hs
 
 executable running-jobs-count
-  default-language:  Haskell2010
-  main-is:           running-jobs-count.hs
+  default-language:
+    Haskell2010
   build-depends:
-      base
+      base       >= 4.6     && < 5
     , bytestring
-    , lens       >= 4.0
+    , lens       >= 4.4
+    , lens-aeson >= 1.0.0.1
     , libjenkins
+  main-is:
+    running-jobs-count.hs

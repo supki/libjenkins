@@ -5,7 +5,7 @@ module Main (main) where
 
 import           Control.Lens                  -- lens
 import           Control.Monad (when)          -- base
-import           Data.Aeson.Lens               -- lens
+import           Data.Aeson.Lens               -- lens-aeson
 import           Data.Foldable (for_)          -- base
 import           Data.Function (fix)           -- base
 import           Data.String (fromString)      -- base
@@ -63,7 +63,7 @@ rename (Options { settings, old, new }) = runJenkins settings $ do
       post_ (job name -/- "doRename" -?- "newName" -=- name')
 
   -- asks user until she enters 'y' or 'n'
-  prompt message = io . fix $ \loop -> do
+  prompt message = liftIO . fix $ \loop -> do
     Text.putStrLn message
     res <- Text.getLine
     case Text.toUpper res of

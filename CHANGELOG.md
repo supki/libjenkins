@@ -1,7 +1,9 @@
-0.4.4.0
-=======
+0.5.0
+=====
 
-  * Switch to `network-uri`
+  * Switched to `network-uri`
+
+  * Removed `io` from the API. Quick migration guide: `io` -> `liftIO`
 
 0.4.3.0
 =======
@@ -11,21 +13,21 @@
 0.4.2.0
 =======
 
-  * Generalize `ConnectInfo`
+  * Generalized `ConnectInfo`
 
 0.4.1.0
 =======
 
-  * Generalize `io`
+  * Generalized `io`
 
-  * Add `runJenkinsThrowing`
+  * Added `runJenkinsThrowing`
 
 0.4.0.0
 =======
 
-  * Use `Text` for username and API token (password)
+  * Switched to `Text` for username and API token (password)
 
-  * Support `lens-4.0`
+  * Supported `lens-4.0`
 
 0.3.0.0
 =======
@@ -38,12 +40,12 @@
 
   * More optics in `Network.HTTP.Conduit.Lens`
 
-  * Add `overallLoad` and `computer` REST API methods shortcuts
+  * Added `overallLoad` and `computer` REST API methods shortcuts
 
 0.2.0.0
 =======
 
-  * Move onto http-conduit 2.0 API.
+  * Moved onto http-conduit 2.0 API.
 
 0.1.0.0
 =======

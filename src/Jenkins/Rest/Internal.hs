@@ -12,7 +12,7 @@ module Jenkins.Rest.Internal where
 
 import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
-import           Control.Exception (Exception, try, toException)
+import           Control.Exception (try, toException)
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Free.Church (F, iterM, liftF)

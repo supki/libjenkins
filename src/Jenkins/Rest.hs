@@ -16,7 +16,7 @@ module Jenkins.Rest
   , post
   , post_
   , concurrently
-  , io
+  , liftIO
   , disconnect
   , with
     -- ** Method
@@ -45,7 +45,7 @@ module Jenkins.Rest
 import Control.Applicative ((<$))
 import Data.Foldable (Foldable, foldr)
 import Control.Lens
-import Control.Monad.IO.Class (MonadIO(..))
+import Control.Monad.IO.Class (liftIO)
 import Data.ByteString.Lazy (ByteString)
 import Data.Monoid (mempty)
 import Network.HTTP.Conduit (Request, HttpException)
@@ -78,15 +78,6 @@ post_ m = post m mempty
 concurrently :: Jenkins a -> Jenkins b -> Jenkins (a, b)
 concurrently ja jb = liftJ $ Conc ja jb (,)
 {-# INLINE concurrently #-}
-
--- | Lift an arbitrary 'IO' action to the 'Jenkins' monad
---
--- @
--- io :: 'IO' a -> 'Jenkins' a
--- @
-io :: MonadIO m => IO a -> m a
-io = liftIO
-{-# INLINE io #-}
 
 -- | Disconnect from Jenkins
 --
