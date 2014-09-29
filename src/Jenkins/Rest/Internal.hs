@@ -12,9 +12,9 @@ module Jenkins.Rest.Internal where
 
 import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
-import           Control.Monad.Catch (MonadCatch, Exception(..), try, catch, throwM)
 import           Control.Lens
 import           Control.Monad
+import           Control.Monad.Catch (MonadCatch, Exception(..), try, catch, throwM)
 import           Control.Monad.Free.Church (F, iterM, liftF)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Class (lift)
@@ -152,23 +152,11 @@ interpreter
 interpreter manager = go where
   go (Get m next) = do
     req <- lift ask
-    let req' = req
-          & Lens.path   %~ (`slash` render m)
-          & Lens.method .~ "GET"
-    bs <- lift . lift $ httpLbs req' manager `withException` JenkinsHttpException
-    next (responseBody bs)
+    res <- lift . lift $ httpLbs (prepareGet m req) manager `withException` JenkinsHttpException
+    next (responseBody res)
   go (Post m body next) = do
     req <- lift ask
-    let req' = req
-          & Lens.path          %~ (`slash` render m)
-          & Lens.method        .~ "POST"
-          & Lens.requestBody   .~ RequestBodyLBS body
-          & Lens.redirectCount .~ 0
-          & Lens.checkStatus   .~ \s@(Status st _) hs cookie_jar ->
-            if 200 <= st && st < 400
-                then Nothing
-                else Just . toException $ StatusCodeException s hs cookie_jar
-    res <- lift . lift $ httpLbs req' manager `withException` JenkinsHttpException
+    res <- lift . lift $ httpLbs (preparePost m body req) manager `withException` JenkinsHttpException
     next (responseBody res)
   go (Conc jenka jenkb next) = do
     (a, b) <- liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
@@ -185,6 +173,20 @@ interpreter manager = go where
     res <- mapMaybeT (local f) (iterJenkinsIO manager jenk)
     next res
   go Dcon = mzero
+
+prepareGet :: Method Complete f -> Request -> Request
+prepareGet m = set Lens.method "GET" . over Lens.path (`slash` render m)
+
+preparePost :: Method Complete f -> ByteString -> Request -> Request
+preparePost m body =
+    set Lens.checkStatus statusCheck
+  . set Lens.redirectCount 0
+  . set Lens.requestBody (RequestBodyLBS body)
+  . set Lens.method "POST"
+  . over Lens.path (`slash` render m)
+ where
+  statusCheck s@(Status st _) hs cookie_jar =
+    if 200 <= st && st < 400 then Nothing else Just . toException $ StatusCodeException s hs cookie_jar
 
 withException :: (MonadCatch m, Exception e, Exception e') => m a -> (e -> e') -> m a
 withException io f = io `catch` \e -> throwM (f e)
