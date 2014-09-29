@@ -46,7 +46,7 @@ main = do
     exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Result HttpException ())
+rename :: Options -> IO (Result JenkinsException ())
 rename (Options { settings, old, new }) = runJenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get (json -?- "tree" -=- "jobs[name]")

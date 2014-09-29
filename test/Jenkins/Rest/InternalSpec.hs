@@ -36,10 +36,3 @@ spec = do
 
     it "does not catch 'IOException' exceptions" $
       runJenkins defaultConnectInfo raiseIO `shouldThrow` _IOException.errorType._NoSuchThing
-
-  describe "runJenkinsThrowing" $ do
-    it "does not catch 'HttpException' exceptions" $
-      runJenkinsThrowing defaultConnectInfo raiseHttp `shouldThrow` _TooManyRetries
-
-    it "does not catch 'IOException' exceptions" $
-      runJenkinsThrowing defaultConnectInfo raiseIO `shouldThrow` _IOException.errorType._NoSuchThing

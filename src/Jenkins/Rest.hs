@@ -10,7 +10,6 @@ module Jenkins.Rest
   , defaultConnectInfo
   , Result(..)
   , runJenkins
-  , runJenkinsThrowing
     -- ** Combinators
   , get
   , post
@@ -37,6 +36,7 @@ module Jenkins.Rest
   , _Error
   , _Disconnect
   , _Result
+  , JenkinsException(..)
     -- * Reexports
   , Request
   , HttpException

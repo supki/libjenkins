@@ -1,6 +1,8 @@
 0.5.0
 =====
 
+  * Removed `runJenkinsThrowing` from the API
+
   * `runJenkins` only catches exceptions thrown by the execution of `Jenkins` queries
 
   * Switched to `network-uri`

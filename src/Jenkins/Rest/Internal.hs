@@ -98,20 +98,6 @@ instance Exception JenkinsException
 runJenkins :: HasConnectInfo t => t -> Jenkins a -> IO (Result JenkinsException a)
 runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkinsInternal conn jenk)
 
--- | Query Jenkins API using 'Jenkins' description
---
--- Successful result is either 'Disconnect' or @ 'Result' v @
---
--- No exceptions are catched, i.e.
---
--- @
--- runJenkinsThrowing :: 'ConnectInfo' -> 'Jenkins' a -> 'IO' ('Result' 'Void' a)
--- @
---
--- is perfectly fine—'Result' won't ever be an 'Error'
-runJenkinsThrowing :: HasConnectInfo t => t -> Jenkins a -> IO (Result e a)
-runJenkinsThrowing conn jenk = maybe Disconnect Result <$> runJenkinsInternal conn jenk
-
 runJenkinsInternal :: HasConnectInfo t => t -> Jenkins a -> IO (Maybe a)
 runJenkinsInternal (view connectInfo -> ConnectInfo h p user token) jenk = do
   url <- parseUrl h
