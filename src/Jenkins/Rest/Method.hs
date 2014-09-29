@@ -69,6 +69,7 @@ deriving instance Show (As f) => Show (Method t f)
 -- | Only to support number literals
 instance t ~ Complete => Num (Method t f) where
   (+)         = error "Method.(+): not supposed to be used"
+  (-)         = error "Method.(-): not supposed to be used"
   (*)         = error "Method.(*): not supposed to be used"
   abs         = error "Method.abs: not supposed to be used"
   signum      = error "Method.signum: not supposed to be used"
