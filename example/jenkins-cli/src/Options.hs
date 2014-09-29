@@ -1,6 +1,6 @@
 module Options where
 
-import Control.Lens
+import Control.Lens hiding (argument)
 import Data.Monoid (mconcat)
 import Data.Foldable (asum)
 import Data.Text (Text, pack)
@@ -91,7 +91,7 @@ subcommands = mconcat
     , Color       <$> strOption (long "color"       <> short 'c' <> help "grep job color")
     ]
 
-  jobs = arguments (Just . pack) (help "Job name" <> metavar "JOB")
+  jobs = many (argument (Just . pack) (help "Job name" <> metavar "JOB"))
 
   helpInfo parser = info (helper <*> parser)
 

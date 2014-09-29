@@ -59,7 +59,7 @@ getJobs = do
 grepJobs :: [Greppable] -> Jenkins ()
 grepJobs greppables = do
   json_root <- get (json -?- "tree" -=- "jobs[name,description,color]")
-  io $ do
+  liftIO $ do
     let jobs = json_root ^.. key "jobs".values
     filtered_jobs <- applyFilters (map grep greppables) jobs
     mapM_ Text.putStrLn (filtered_jobs^..folded.key "name"._String)
@@ -78,14 +78,14 @@ property (Color       _) json_value = json_value^.singular (key "color"._String)
 
 withJobsOrHandle :: (Text -> Jenkins a) -> Handle -> [Text] -> Jenkins ()
 withJobsOrHandle doThing handle [] =
-  io (Text.hGetContents handle) >>= traverse_ doThing . Text.words
+  liftIO (Text.hGetContents handle) >>= traverse_ doThing . Text.words
 withJobsOrHandle doThing _      xs =
   traverse_ doThing xs
 
 getJob :: Text -> Jenkins ()
 getJob name = do
   config <- XML.parseLBS_ XML.def <$> get (job name -/-  "config.xml")
-  io (Lazy.putStrLn (XML.renderText XML.def { XML.rsPretty = True } config))
+  liftIO (Lazy.putStrLn (XML.renderText XML.def { XML.rsPretty = True } config))
 
 enableJob :: Text -> Jenkins ()
 enableJob = withJob "enable"
@@ -100,7 +100,7 @@ deleteJob :: Text -> Jenkins ()
 deleteJob = withJob "doDelete"
 
 waitJobs :: Jenkins ()
-waitJobs = get (queue `as` json) >>= io . printJobs
+waitJobs = get (queue `as` json) >>= liftIO . printJobs
  where printJobs info = mapM_ Text.putStrLn (info ^.. key "items".values.key "task".key "name"._String)
 
 withJob :: (forall f. Method Complete f) -> Text -> Jenkins ()
@@ -112,7 +112,7 @@ renameJob old new name = substitute old new name >>=
 
 substitute :: String -> String -> Text -> Jenkins (Maybe Text)
 substitute old new name = do
-  (exitcode, stdout, _) <- io $
+  (exitcode, stdout, _) <- liftIO $
     readProcessWithExitCode "perl" ["-n", "-e", printf "print if s/%s/%s/ or die" old new] (Text.unpack name)
   return $ exitcode ^? _ExitSuccess.to (\_ -> Text.pack stdout)
 
