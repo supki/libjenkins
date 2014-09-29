@@ -1,6 +1,8 @@
 0.5.0
 =====
 
+  * `runJenkins` only catches exceptions thrown by the execution of `Jenkins` queries
+
   * Switched to `network-uri`
 
   * Removed `io` from the API. Quick migration guide: `io` -> `liftIO`

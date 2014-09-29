@@ -12,7 +12,7 @@ module Jenkins.Rest.Internal where
 
 import           Control.Applicative
 import           Control.Concurrent.Async (concurrently)
-import           Control.Exception (try, toException)
+import           Control.Monad.Catch (MonadCatch, Exception(..), try, catch, throwM)
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Free.Church (F, iterM, liftF)
@@ -78,10 +78,16 @@ data ConnectInfo = ConnectInfo
 
 -- | The result of Jenkins REST API queries
 data Result e v =
-    Error e    -- ^ Exception @e@ was thrown while querying
+    Error e    -- ^ Exception @e@ was thrown while querying Jenkins
   | Disconnect -- ^ The client was explicitly disconnected
   | Result v   -- ^ Querying successfully finished the with value @v@
     deriving (Show, Eq, Ord, Typeable, Data, Generic)
+
+newtype JenkinsException
+  = JenkinsHttpException HttpException
+    deriving (Show, Typeable)
+
+instance Exception JenkinsException
 
 -- | Query Jenkins API using 'Jenkins' description
 --
@@ -89,7 +95,7 @@ data Result e v =
 --
 -- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
 -- and wraps in 'Error'. Other exceptions are /not/ catched
-runJenkins :: HasConnectInfo t => t -> Jenkins a -> IO (Result HttpException a)
+runJenkins :: HasConnectInfo t => t -> Jenkins a -> IO (Result JenkinsException a)
 runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkinsInternal conn jenk)
 
 -- | Query Jenkins API using 'Jenkins' description
@@ -107,14 +113,13 @@ runJenkinsThrowing :: HasConnectInfo t => t -> Jenkins a -> IO (Result e a)
 runJenkinsThrowing conn jenk = maybe Disconnect Result <$> runJenkinsInternal conn jenk
 
 runJenkinsInternal :: HasConnectInfo t => t -> Jenkins a -> IO (Maybe a)
-runJenkinsInternal (view connectInfo -> ConnectInfo h p user token) jenk =
-  withManager $ \manager -> do
-    req <- liftIO $ parseUrl h
-    let req' = req
-          & Lens.port            .~ p
-          & Lens.responseTimeout .~ Just (20 * 1000000)
-          & applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
-    runReaderT (runMaybeT (iterJenkinsIO manager jenk)) req'
+runJenkinsInternal (view connectInfo -> ConnectInfo h p user token) jenk = do
+  url <- parseUrl h
+  withManager $ \m ->
+    runReaderT (runMaybeT (iterJenkinsIO m jenk))
+      . set Lens.port p
+      . applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
+      $ url
 
 
 -- | A prism into Jenkins error
@@ -164,7 +169,7 @@ interpreter manager = go where
     let req' = req
           & Lens.path   %~ (`slash` render m)
           & Lens.method .~ "GET"
-    bs <- lift . lift $ httpLbs req' manager
+    bs <- lift . lift $ httpLbs req' manager `withException` JenkinsHttpException
     next (responseBody bs)
   go (Post m body next) = do
     req <- lift ask
@@ -177,7 +182,7 @@ interpreter manager = go where
             if 200 <= st && st < 400
                 then Nothing
                 else Just . toException $ StatusCodeException s hs cookie_jar
-    res <- lift . lift $ httpLbs req' manager
+    res <- lift . lift $ httpLbs req' manager `withException` JenkinsHttpException
     next (responseBody res)
   go (Conc jenka jenkb next) = do
     (a, b) <- liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
@@ -194,6 +199,9 @@ interpreter manager = go where
     res <- mapMaybeT (local f) (iterJenkinsIO manager jenk)
     next res
   go Dcon = mzero
+
+withException :: (MonadCatch m, Exception e, Exception e') => m a -> (e -> e') -> m a
+withException io f = io `catch` \e -> throwM (f e)
 
 
 -- | Default Jenkins connection settings
