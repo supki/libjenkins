@@ -18,7 +18,6 @@ module Jenkins.Rest
   , concurrently
   , orElse
   , liftIO
-  , disconnect
   , with
     -- ** Method
   , module Jenkins.Rest.Method
@@ -100,13 +99,6 @@ orElse :: Jenkins a -> Jenkins a -> Jenkins a
 orElse ja jb = liftJ (Or ja jb)
 {-# INLINE orElse #-}
 
--- | Disconnect from Jenkins
---
--- Any following queries won't be executed
-disconnect :: Jenkins a
-disconnect = liftJ Dcon
-{-# INLINE disconnect #-}
-
 -- | Make local changes to the 'Request'
 with :: (Request -> Request) -> Jenkins a -> Jenkins a
 with f j = liftJ $ With f j id
@@ -162,3 +154,8 @@ forceRestart = do
   post_ "restart"
   disconnect
 {-# INLINE forceRestart #-}
+
+-- Disconnect from Jenkins. Any following queries won't be executed
+disconnect :: Jenkins a
+disconnect = liftJ Dcon
+{-# INLINE disconnect #-}
