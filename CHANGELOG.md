@@ -1,6 +1,10 @@
 0.5.0
 =====
 
+  * Added `getS` for tighter control of Jenkins responses consumption
+
+  * `post` variants do not read the response body at all anymore
+
   * Added `orElse`
 
   * Removed `runJenkinsThrowing` from the API

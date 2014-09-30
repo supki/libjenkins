@@ -23,6 +23,9 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
 import           Control.Monad.Trans.Resource (ResourceT)
 import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString as Strict
+import           Data.Conduit (ResumableSource)
+import qualified Data.Conduit as C
 import           Data.Data (Data, Typeable)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
@@ -47,8 +50,8 @@ instance MonadIO Jenkins where
 
 -- | Jenkins REST API query
 data JenkinsF a where
-  Get  :: Method Complete f -> (ByteString -> a) -> JenkinsF a
-  Post :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JenkinsF a
+  Get  :: Method Complete f -> (ResumableSource (ResourceT IO) Strict.ByteString -> a) -> JenkinsF a
+  Post :: (forall f. Method Complete f) -> ByteString -> a -> JenkinsF a
   Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
   Or   :: Jenkins a -> Jenkins a -> JenkinsF a
   IO   :: IO a -> JenkinsF a
@@ -57,7 +60,7 @@ data JenkinsF a where
 
 instance Functor JenkinsF where
   fmap f (Get  m g)      = Get  m      (f . g)
-  fmap f (Post m body g) = Post m body (f . g)
+  fmap f (Post m body a) = Post m body (f a)
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
   fmap f (Or a b)        = Or (fmap f a) (fmap f b)
   fmap f (IO a)          = IO (fmap f a)
@@ -157,20 +160,21 @@ interpreter
 interpreter man = go where
   go (Get m next) = do
     req <- lift ask
-    res <- lift . lift $ httpLbs (prepareGet m req) man `withException` JenkinsHttpException
+    res <- lift . lift $ http (prepareGet m req) man `withException` JenkinsHttpException
     next (responseBody res)
   go (Post m body next) = do
     req <- lift ask
-    res <- lift . lift $ httpLbs (preparePost m body req) man `withException` JenkinsHttpException
-    next (responseBody res)
+    res <- lift . lift $ http (preparePost m body req) man `withException` JenkinsHttpException
+    ()  <- lift . lift $ C.closeResumableSource (responseBody res)
+    next
   go (Conc ja jb next) = do
     (a, b) <- intoIO man $ \run -> concurrently (run ja) (run jb)
     c      <- outoIO (return a)
     d      <- outoIO (return b)
     next c d
   go (Or ja jb) = do
-    x    <- intoIO man $ \run -> run ja `catch` \(JenkinsHttpException _) -> run jb
-    next <- outoIO (return x)
+    res  <- intoIO man $ \run -> run ja `catch` \(JenkinsHttpException _) -> run jb
+    next <- outoIO (return res)
     next
   go (IO action) = join (liftIO action)
   go (With f jenk next) = do
@@ -194,8 +198,7 @@ intoIO m f =
 outoIO
   :: IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT b)))
   -> MaybeT (ReaderT Request (ResourceT IO)) b
-outoIO mx =
-  restoreT . restoreT . restoreT $ mx
+outoIO = restoreT . restoreT . restoreT
 
 prepareGet :: Method Complete f -> Request -> Request
 prepareGet m = set Lens.method "GET" . over Lens.path (`slash` render m)

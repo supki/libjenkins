@@ -12,6 +12,7 @@ module Jenkins.Rest
   , runJenkins
     -- ** Combinators
   , get
+  , getS
   , post
   , post_
   , concurrently
@@ -43,31 +44,45 @@ module Jenkins.Rest
   , HttpException
   ) where
 
-import Control.Applicative ((<$))
-import Data.Foldable (Foldable, foldr)
-import Control.Lens
-import Control.Monad.IO.Class (liftIO)
-import Data.ByteString.Lazy (ByteString)
-import Data.Monoid (mempty)
-import Network.HTTP.Conduit (Request, HttpException)
-import Prelude hiding (foldr)
-import Text.XML (Document, renderLBS, def)
+import           Control.Applicative ((<$))
+import           Data.Foldable (Foldable)
+import qualified Data.Foldable as F
+import           Control.Lens
+import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import           Control.Monad.IO.Class (liftIO)
+import qualified Data.ByteString as Strict
+import qualified Data.ByteString.Lazy as Lazy
+import           Data.Conduit (ResumableSource, ($$+-))
+import qualified Data.Conduit.List as CL
+import           Data.Monoid (mempty)
+import           Network.HTTP.Conduit (Request, HttpException)
+import           Text.XML (Document, renderLBS, def)
 
-import Jenkins.Rest.Internal
-import Jenkins.Rest.Method
-import Network.HTTP.Conduit.Lens
-
-{-# ANN module ("HLint: ignore Use const" :: String) #-}
+import           Jenkins.Rest.Internal
+import           Jenkins.Rest.Method
+import           Network.HTTP.Conduit.Lens
 
 
 -- | @GET@ query
-get :: Method Complete f -> Jenkins ByteString
-get m = liftJ (Get m id)
+--
+-- While the return type is a lazy bytestring, the entire response
+-- sits in memory anyway: lazy I/O is not used
+get :: Method Complete f -> Jenkins Lazy.ByteString
+get m = fmap Lazy.fromChunks . liftIO . runResourceT =<< liftJ (Get m ($$+- CL.consume))
 {-# INLINE get #-}
 
+-- | @GET@ query
+--
+-- If you don't close the source eventually (either explicitly with
+-- 'Data.Conduit.closeResumableSource' or implicitly by reading from it)
+-- it will leak a socket.
+getS :: Method Complete f -> Jenkins (ResumableSource (ResourceT IO) Strict.ByteString)
+getS m = liftJ (Get m id)
+{-# INLINE getS #-}
+
 -- | @POST@ query (with a payload)
-post :: (forall f. Method Complete f) -> ByteString -> Jenkins ()
-post m body = liftJ (Post m body (\_ -> ()))
+post :: (forall f. Method Complete f) -> Lazy.ByteString -> Jenkins ()
+post m body = liftJ (Post m body ())
 {-# INLINE post #-}
 
 -- | @POST@ query (without payload)
@@ -105,7 +120,7 @@ postXML m =
 
 -- | Send a list of queries 'concurrently'
 concurrentlys :: Foldable f => f (Jenkins a) -> Jenkins [a]
-concurrentlys = foldr go (return [])
+concurrentlys = F.foldr go (return [])
  where
   go x xs = do
     (y, ys) <- concurrently x xs
@@ -116,7 +131,7 @@ concurrentlys = foldr go (return [])
 --
 -- /Note/: exceptions are still raised
 concurrentlys_ :: Foldable f => f (Jenkins a) -> Jenkins ()
-concurrentlys_ = foldr (\x xs -> () <$ concurrently x xs) (return ())
+concurrentlys_ = F.foldr (\x xs -> () <$ concurrently x xs) (return ())
 {-# INLINE concurrentlys_ #-}
 
 -- | Reload jenkins configuration from disk

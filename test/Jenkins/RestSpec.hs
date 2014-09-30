@@ -5,6 +5,7 @@ import           Control.Applicative
 import           Control.Monad.Trans.State (State, evalState, get, put)
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
+import qualified Data.Conduit as C
 import           Data.Monoid (mempty)
 import           Test.Hspec
 import qualified Jenkins.Rest as Rest
@@ -33,9 +34,9 @@ spec = do
   context "GET requests" $
     it "get sends GET requests" $ do
       interpret $ do
-        Rest.get "foo"
-        Rest.get "bar"
-        Rest.get "baz"
+        Rest.getS "foo"
+        Rest.getS "bar"
+        Rest.getS "baz"
      `shouldBe`
       [QGet 0 "foo", QGet 1 "bar", QGet 2 "baz"]
 
@@ -79,10 +80,10 @@ interpret adt = evalState (iterJenkins go ([] <$ adt)) (Requests [0..]) where
   go :: JenkinsF (State (Requests Int) [Query]) -> State (Requests Int) [Query]
   go (Get m n) = do
     r <- render QGet m
-    fmap (r :) (n mempty)
+    fmap (r :) (n (C.newResumableSource (C.yield mempty)))
   go (Post m body n) = do
     r <- render (\x y -> QPost x body y) m
-    fmap (r :) (n mempty)
+    fmap (r :) n
   go Dcon =
     return [QDisconnect]
 
