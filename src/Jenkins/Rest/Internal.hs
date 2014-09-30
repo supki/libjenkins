@@ -33,6 +33,9 @@ import           Network.HTTP.Types (Status(..))
 import           Jenkins.Rest.Method (Method, Type(..), render, slash)
 import qualified Network.HTTP.Conduit.Lens as Lens
 
+{-# ANN module ("HLint: ignore Use const" :: String) #-}
+{-# ANN module ("HLint: ignore Use join" :: String) #-}
+
 
 -- | Jenkins REST API query sequence description
 newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
@@ -47,6 +50,7 @@ data JenkinsF a where
   Get  :: Method Complete f -> (ByteString -> a) -> JenkinsF a
   Post :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JenkinsF a
   Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
+  Or   :: Jenkins a -> Jenkins a -> JenkinsF a
   IO   :: IO a -> JenkinsF a
   With :: (Request -> Request) -> Jenkins b -> (b -> a) -> JenkinsF a
   Dcon :: JenkinsF a
@@ -55,6 +59,7 @@ instance Functor JenkinsF where
   fmap f (Get  m g)      = Get  m      (f . g)
   fmap f (Post m body g) = Post m body (f . g)
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
+  fmap f (Or a b)        = Or (fmap f a) (fmap f b)
   fmap f (IO a)          = IO (fmap f a)
   fmap f (With h j g)    = With h j    (f . g)
   fmap _ Dcon            = Dcon
@@ -149,30 +154,48 @@ interpreter
   :: Manager
   -> JenkinsF (MaybeT (ReaderT Request (ResourceT IO)) a)
   -> MaybeT (ReaderT Request (ResourceT IO)) a
-interpreter manager = go where
+interpreter man = go where
   go (Get m next) = do
     req <- lift ask
-    res <- lift . lift $ httpLbs (prepareGet m req) manager `withException` JenkinsHttpException
+    res <- lift . lift $ httpLbs (prepareGet m req) man `withException` JenkinsHttpException
     next (responseBody res)
   go (Post m body next) = do
     req <- lift ask
-    res <- lift . lift $ httpLbs (preparePost m body req) manager `withException` JenkinsHttpException
+    res <- lift . lift $ httpLbs (preparePost m body req) man `withException` JenkinsHttpException
     next (responseBody res)
-  go (Conc jenka jenkb next) = do
-    (a, b) <- liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
-      let
-        run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
-        run = run''' . run'' . run' . iterJenkinsIO manager
-      in
-        concurrently (run jenka) (run jenkb)
-    c <- restoreT . restoreT . restoreT $ return a
-    d <- restoreT . restoreT . restoreT $ return b
+  go (Conc ja jb next) = do
+    (a, b) <- intoIO man $ \run -> concurrently (run ja) (run jb)
+    c      <- outoIO (return a)
+    d      <- outoIO (return b)
     next c d
+  go (Or ja jb) = do
+    x    <- intoIO man $ \run -> run ja `catch` \(JenkinsHttpException _) -> run jb
+    next <- outoIO (return x)
+    next
   go (IO action) = join (liftIO action)
   go (With f jenk next) = do
-    res <- mapMaybeT (local f) (iterJenkinsIO manager jenk)
+    res <- mapMaybeT (local f) (iterJenkinsIO man jenk)
     next res
   go Dcon = mzero
+
+intoIO
+  :: Monad m
+  => Manager
+  -> ((forall b. Jenkins b -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT b)))) -> m a)
+  -> MaybeT (ReaderT Request (ResourceT m)) a
+intoIO m f =
+  liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
+    let
+      run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
+      run = run''' . run'' . run' . iterJenkinsIO m
+    in
+      f run
+
+outoIO
+  :: IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT b)))
+  -> MaybeT (ReaderT Request (ResourceT IO)) b
+outoIO mx =
+  restoreT . restoreT . restoreT $ mx
 
 prepareGet :: Method Complete f -> Request -> Request
 prepareGet m = set Lens.method "GET" . over Lens.path (`slash` render m)

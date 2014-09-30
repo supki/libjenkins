@@ -15,6 +15,7 @@ module Jenkins.Rest
   , post
   , post_
   , concurrently
+  , orElse
   , liftIO
   , disconnect
   , with
@@ -61,12 +62,12 @@ import Network.HTTP.Conduit.Lens
 
 -- | @GET@ query
 get :: Method Complete f -> Jenkins ByteString
-get m = liftJ $ Get m id
+get m = liftJ (Get m id)
 {-# INLINE get #-}
 
 -- | @POST@ query (with a payload)
 post :: (forall f. Method Complete f) -> ByteString -> Jenkins ()
-post m body = liftJ $ Post m body (\_ -> ())
+post m body = liftJ (Post m body (\_ -> ()))
 {-# INLINE post #-}
 
 -- | @POST@ query (without payload)
@@ -76,8 +77,13 @@ post_ m = post m mempty
 
 -- | Do both queries 'concurrently'
 concurrently :: Jenkins a -> Jenkins b -> Jenkins (a, b)
-concurrently ja jb = liftJ $ Conc ja jb (,)
+concurrently ja jb = liftJ (Conc ja jb (,))
 {-# INLINE concurrently #-}
+
+-- | @orElse a b@ runs @a@ and only runs @b@ if @a@ has thrown a @JenkinsException@
+orElse :: Jenkins a -> Jenkins a -> Jenkins a
+orElse ja jb = liftJ (Or ja jb)
+{-# INLINE orElse #-}
 
 -- | Disconnect from Jenkins
 --
@@ -90,7 +96,6 @@ disconnect = liftJ Dcon
 with :: (Request -> Request) -> Jenkins a -> Jenkins a
 with f j = liftJ $ With f j id
 {-# INLINE with #-}
-
 
 -- | @POST@ job's @config.xml@ (or any other xml, really) in @xml-conduit@ format
 postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()

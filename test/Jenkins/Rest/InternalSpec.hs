@@ -24,15 +24,23 @@ spec = do
       raiseIO   = liftIO (throwIO (mkIOError doesNotExistErrorType "foo" Nothing Nothing))
 
   describe "runJenkins" $ do
-    it "catches 'HttpException' exceptions related to Jenkins queries" $
+    it "wraps uncatched 'HttpException' exceptions from the queries in 'Error'" $
       runJenkins (defaultConnectInfo & jenkinsPort .~ 80) (liftJ (Get "hi" id))
      `shouldPerform`
       Status 404 ""
      `through`
       _Error._JenkinsException._StatusCodeException._1
 
-    it "does not catch 'HttpException' exceptions not related to Jenkins queries" $
+    it "can catch 'HttpException' exceptions related from the queries" $
+      runJenkins (defaultConnectInfo & jenkinsPort .~ 80)
+        (liftJ (Or (liftJ (Get "hi" id) >> return 4) (return 7)))
+     `shouldPerform`
+      7
+     `through`
+      _Result
+
+    it "does not catch (and wrap) 'HttpException's not from the queries" $
       runJenkins defaultConnectInfo raiseHttp `shouldThrow` _TooManyRetries
 
-    it "does not catch 'IOException' exceptions" $
+    it "does not catch (and wrap) 'IOException's" $
       runJenkins defaultConnectInfo raiseIO `shouldThrow` _IOException.errorType._NoSuchThing
