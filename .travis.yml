@@ -9,4 +9,4 @@ install:
 
 script:
     - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal example/jenkins-cli/jenkins-cli.cabal
-    - cabal sdist
+    - cabal sdist && cabal install --enable-tests dist/libjenkins-*.tar.gz
