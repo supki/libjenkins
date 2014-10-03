@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-name-shadowing #-}
 -- | Concurrency benchmark
 --
 -- The benchmark does the folllowing:
@@ -16,9 +15,9 @@
 module Main (main) where
 
 import           Control.Lens                  -- lens
-import           Control.Lens.Aeson            -- lens-aeson
-import qualified Data.ByteString.Char8 as B    -- bytestring
+import           Data.Aeson.Lens               -- lens-aeson
 import           Data.Text (Text)              -- text
+import qualified Data.Text as Text             -- text
 import           Jenkins.Rest                  -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
@@ -31,9 +30,9 @@ main :: IO ()
 main = do
   m:host:port:user:pass:_ <- getArgs
   ds <- descriptions (aggregate m) $
-    ConnectInfo host (read port) (B.pack user) (B.pack pass)
+    ConnectInfo host (read port) (Text.pack user) (Text.pack pass)
   case ds of
-    Result ds  -> mapM_ print ds
+    Result ds' -> mapM_ print ds'
     Disconnect -> die "disconnect!"
     Error e    -> die (show e)
  where
@@ -42,14 +41,14 @@ main = do
     exitFailure
 
   aggregate :: String -> Aggregate a b
-  aggregate "concurrent" = (concurrentlys .) . map
+  aggregate "concurrent" = traverseC
   aggregate "sequential" = mapM
   aggregate _ = error "Unknown mode"
 
 descriptions
   :: Aggregate Text (Maybe Text)
   -> ConnectInfo
-  -> IO (Result HttpException [Maybe Text])
+  -> IO (Result JenkinsException [Maybe Text])
 descriptions aggregate settings = runJenkins settings $ do
   res <- get (json -?- "tree" -=- "jobs[name]")
   aggregate describe (res ^.. key "jobs".values.key "name"._String)
