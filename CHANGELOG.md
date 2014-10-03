@@ -1,6 +1,12 @@
 0.5.0
 =====
 
+  * Replaced `concurrentlys` and `concurrentlys_` with `traverseC` and `traverseC_`
+    respectively. Quick migration guide:
+
+    + `concurrentlys`  -> `traverseC  id . toList`
+    + `concurrentlys_` -> `traverseC_ id . toList`
+
   * Added `getS` for tighter control of Jenkins responses consumption
 
   * `post` variants do not read the response body at all anymore

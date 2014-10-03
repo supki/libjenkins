@@ -23,8 +23,8 @@ module Jenkins.Rest
   , module Jenkins.Rest.Method
     -- ** Convenience
   , postXML
-  , concurrentlys
-  , concurrentlys_
+  , traverseC
+  , traverseC_
   , reload
   , restart
   , forceRestart
@@ -44,8 +44,6 @@ module Jenkins.Rest
   ) where
 
 import           Control.Applicative ((<$))
-import           Data.Foldable (Foldable)
-import qualified Data.Foldable as F
 import           Control.Lens
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import           Control.Monad.IO.Class (liftIO)
@@ -101,19 +99,15 @@ with f j = liftJ $ With f j id
 postXML :: (forall f. Method Complete f) -> Document -> Jenkins ()
 postXML m = with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
 
--- | Send a list of queries 'concurrently'
-concurrentlys :: Foldable f => f (Jenkins a) -> Jenkins [a]
-concurrentlys = F.foldr go (return [])
+-- | Make a bunch of queries 'concurrently'
+traverseC :: (a -> Jenkins b) -> [a] -> Jenkins [b]
+traverseC f = foldr go (return [])
  where
-  go x xs = do
-    (y, ys) <- concurrently x xs
-    return (y : ys)
+  go x xs = do (y, ys) <- concurrently (f x) xs; return (y : ys)
 
--- | Send a list of queries 'concurrently' ignoring their results
---
--- /Note/: exceptions are still raised
-concurrentlys_ :: Foldable f => f (Jenkins a) -> Jenkins ()
-concurrentlys_ = F.foldr (\x xs -> () <$ concurrently x xs) (return ())
+-- | Make a bunch of queries 'concurrently' ignoring their results
+traverseC_ :: (a -> Jenkins b) -> [a] -> Jenkins ()
+traverseC_ f = foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
 
 -- | Reload jenkins configuration from disk
 --
