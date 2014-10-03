@@ -46,7 +46,6 @@ newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
 
 instance MonadIO Jenkins where
   liftIO = liftJ . IO
-  {-# INLINE liftIO #-}
 
 -- | Jenkins REST API query
 data JenkinsF a where
@@ -66,12 +65,10 @@ instance Functor JenkinsF where
   fmap f (IO a)          = IO (fmap f a)
   fmap f (With h j g)    = With h j    (f . g)
   fmap _ Dcon            = Dcon
-  {-# INLINE fmap #-}
 
 -- | Lift 'JenkinsF' to 'Jenkins'
 liftJ :: JenkinsF a -> Jenkins a
 liftJ = Jenkins . liftF
-{-# INLINE liftJ #-}
 
 -- | Jenkins connection settings
 --
@@ -145,12 +142,10 @@ iterJenkinsIO
   -> Jenkins a
   -> MaybeT (ReaderT Request (ResourceT IO)) a
 iterJenkinsIO manager = iterJenkins (interpreter manager)
-{-# INLINE iterJenkinsIO #-}
 
 -- | Tear down 'JenkinsF' AST with a 'JenkinsF'-algebra
 iterJenkins :: Monad m => (JenkinsF (m a) -> m a) -> Jenkins a -> m a
 iterJenkins go = iterM go . unJenkins
-{-# INLINE iterJenkins #-}
 
 -- | 'JenkinsF' AST interpreter
 interpreter
