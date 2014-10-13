@@ -1,8 +1,10 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Jenkins.RestSpec (spec) where
 
 import           Control.Applicative
 import           Control.Monad.Trans.State (State, evalState, get, put)
+import           Control.Monad.Trans.Resource (ResourceT)
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.Conduit as C
@@ -34,9 +36,11 @@ spec = do
   context "GET requests" $
     it "get sends GET requests" $ do
       interpret $ do
-        Rest.getS "foo"
-        Rest.getS "bar"
-        Rest.getS "baz"
+        let getS :: Rest.Method Rest.Complete f -> Jenkins (ResourceT IO (C.ResumableSource (ResourceT IO) Strict.ByteString))
+            getS = Rest.getS
+        getS "foo"
+        getS "bar"
+        getS "baz"
      `shouldBe`
       [QGet 0 "foo", QGet 1 "bar", QGet 2 "baz"]
 
@@ -80,7 +84,7 @@ interpret adt = evalState (iterJenkins go ([] <$ adt)) (Requests [0..]) where
   go :: JenkinsF (State (Requests Int) [Query]) -> State (Requests Int) [Query]
   go (Get m n) = do
     r <- render QGet m
-    fmap (r :) (n (C.newResumableSource (C.yield mempty)))
+    fmap (r :) (n (return (C.newResumableSource (C.yield mempty))))
   go (Post m body n) = do
     r <- render (\x y -> QPost x body y) m
     fmap (r :) n

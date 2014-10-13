@@ -45,8 +45,9 @@ module Jenkins.Rest
 
 import           Control.Applicative ((<$))
 import           Control.Lens
-import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
+import           Control.Monad.Catch (MonadCatch)
 import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Trans.Resource (MonadResource, runResourceT)
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Conduit (ResumableSource, ($$+-))
@@ -65,15 +66,19 @@ import           Network.HTTP.Conduit.Lens
 -- While the return type is a lazy bytestring, the entire response
 -- sits in memory anyway: lazy I/O is not used
 get :: Method Complete f -> Jenkins Lazy.ByteString
-get m = fmap Lazy.fromChunks . liftIO . runResourceT =<< liftJ (Get m ($$+- CL.consume))
+get m = do
+  ms <- getS m
+  liftIO $ fmap Lazy.fromChunks . runResourceT $ do
+    s <- ms
+    s $$+- CL.consume
 
 -- | @GET@ query
 --
 -- If you don't close the source eventually (either explicitly with
 -- 'Data.Conduit.closeResumableSource' or implicitly by reading from it)
 -- it will leak a socket.
-getS :: Method Complete f -> Jenkins (ResumableSource (ResourceT IO) Strict.ByteString)
-getS m = liftJ (Get m id)
+getS :: (MonadCatch m, MonadResource m) => Method Complete f -> Jenkins (m (ResumableSource m Strict.ByteString))
+getS m = liftJ (Get m (\x -> x))
 
 -- | @POST@ query (with a payload)
 post :: (forall f. Method Complete f) -> Lazy.ByteString -> Jenkins ()

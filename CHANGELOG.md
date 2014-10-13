@@ -1,3 +1,8 @@
+0.6.0
+=====
+
+  * Generalize `getS`. As a side-effect, `get` doesn't leak like crazy anymore
+
 0.5.0
 =====
 

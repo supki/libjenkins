@@ -20,7 +20,7 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Control (MonadTransControl(..))
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
-import           Control.Monad.Trans.Resource (ResourceT)
+import           Control.Monad.Trans.Resource (ResourceT, MonadResource)
 import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString as Strict
@@ -49,7 +49,10 @@ instance MonadIO Jenkins where
 
 -- | Jenkins REST API query
 data JenkinsF a where
-  Get  :: Method Complete f -> (ResumableSource (ResourceT IO) Strict.ByteString -> a) -> JenkinsF a
+  Get
+    :: Method Complete f
+    -> (((MonadResource m, MonadCatch m) => m (ResumableSource m Strict.ByteString)) -> a)
+    -> JenkinsF a
   Post :: (forall f. Method Complete f) -> ByteString -> a -> JenkinsF a
   Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
   Or   :: Jenkins a -> Jenkins a -> JenkinsF a
@@ -155,8 +158,7 @@ interpreter
 interpreter man = go where
   go (Get m next) = do
     req <- lift ask
-    res <- lift . lift $ http (prepareGet m req) man `withException` JenkinsHttpException
-    next (responseBody res)
+    next (liftM responseBody (http (prepareGet m req) man) `withException` JenkinsHttpException)
   go (Post m body next) = do
     req <- lift ask
     res <- lift . lift $ http (preparePost m body req) man `withException` JenkinsHttpException
