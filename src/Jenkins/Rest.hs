@@ -52,6 +52,7 @@ import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Conduit (ResumableSource, ($$+-))
 import qualified Data.Conduit.List as CL
+import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
 import           Network.HTTP.Conduit (Request, HttpException)
 import           Text.XML (Document, renderLBS, def)
@@ -111,8 +112,8 @@ traverseC f = foldr go (return [])
   go x xs = do (y, ys) <- concurrently (f x) xs; return (y : ys)
 
 -- | Make a bunch of queries 'concurrently' ignoring their results
-traverseC_ :: (a -> Jenkins b) -> [a] -> Jenkins ()
-traverseC_ f = foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
+traverseC_ :: F.Foldable f => (a -> Jenkins b) -> f a -> Jenkins ()
+traverseC_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
 
 -- | Reload jenkins configuration from disk
 --

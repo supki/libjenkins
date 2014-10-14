@@ -1,7 +1,9 @@
 0.6.0
 =====
 
-  * Generalize `getS`. As a side-effect, `get` doesn't leak like crazy anymore
+  * Generalized `getS`. As a side-effect, `get` doesn't leak like crazy anymore
+
+  * Generalized `traverseC_` (again)
 
 0.5.0
 =====
