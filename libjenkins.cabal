@@ -36,6 +36,7 @@ library
     Jenkins.Rest
     Jenkins.Rest.Internal
     Jenkins.Rest.Method
+    Jenkins.Rest.Method.Internal
     Network.HTTP.Conduit.Lens
   build-depends:
       async         >= 2.0

@@ -12,6 +12,7 @@ import           Data.Monoid (mempty)
 import           Test.Hspec
 import qualified Jenkins.Rest as Rest
 import           Jenkins.Rest.Internal
+import qualified Jenkins.Rest.Method.Internal as Method
 
 
 spec :: Spec
@@ -94,7 +95,7 @@ interpret adt = evalState (iterJenkins go ([] <$ adt)) (Requests [0..]) where
 render :: (a -> Strict.ByteString -> Query) -> Rest.Method f x -> State (Requests a) Query
 render f m = do
   n <- next
-  return $ f n (Rest.render m)
+  return $ f n (Method.render m)
 
 next :: State (Requests a) a
 next = do

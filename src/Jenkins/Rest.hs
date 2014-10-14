@@ -4,12 +4,12 @@
 -- | Jenkins REST API interface
 module Jenkins.Rest
   ( -- * Query Jenkins
-    Jenkins
-  , HasConnectInfo(..)
-  , ConnectInfo(..)
-  , defaultConnectInfo
+    runJenkins
   , Result(..)
-  , runJenkins
+  , Jenkins
+  , HasConnectInfo(..)
+  , ConnectInfo
+  , defaultConnectInfo
     -- ** Combinators
   , get
   , getS
@@ -35,7 +35,6 @@ module Jenkins.Rest
   , JenkinsException(..)
     -- * Reexports
   , Request
-  , HttpException
   ) where
 
 import           Control.Applicative ((<$))
@@ -49,7 +48,7 @@ import           Data.Conduit (ResumableSource, ($$+-))
 import qualified Data.Conduit.List as CL
 import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
-import           Network.HTTP.Conduit (Request, HttpException)
+import           Network.HTTP.Conduit (Request)
 import           Text.XML (Document, renderLBS, def)
 
 import           Jenkins.Rest.Internal

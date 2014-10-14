@@ -7,6 +7,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_HADDOCK hide #-}
 -- | Jenkins REST API interface internals
 module Jenkins.Rest.Internal where
 
@@ -33,7 +34,7 @@ import           GHC.Generics (Generic)
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (Status(..))
 
-import           Jenkins.Rest.Method (Method, Type(..), render, slash)
+import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
 import qualified Network.HTTP.Conduit.Lens as Lens
 
 {-# ANN module ("HLint: ignore Use const" :: String) #-}
@@ -74,14 +75,11 @@ liftJ :: JenkinsF a -> Jenkins a
 liftJ = Jenkins . liftF
 
 -- | Jenkins connection settings
---
--- '_jenkinsApiToken' may be user's password, Jenkins
--- does not make any distinction between these concepts
 data ConnectInfo = ConnectInfo
   { _jenkinsUrl      :: String -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
   , _jenkinsPort     :: Int    -- ^ Jenkins port, e.g. @8080@
   , _jenkinsUser     :: Text   -- ^ Jenkins user, e.g. @jenkins@
-  , _jenkinsApiToken :: Text   -- ^ Jenkins user API token
+  , _jenkinsApiToken :: Text   -- ^ Jenkins user API token or password
   } deriving (Show, Eq, Typeable, Data, Generic)
 
 -- | The result of Jenkins REST API queries
