@@ -7,6 +7,7 @@ module Config
 #endif
   ) where
 
+import           Control.Lens
 import           Control.Applicative
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
@@ -24,7 +25,11 @@ instance FromJSON Config where
     port  <- o .: "port"
     user  <- o .: "user"
     token <- o .: "api-token"
-    return (Config (ConnectInfo url port user token))
+    return (Config (defaultConnectInfo
+      & jenkinsUrl .~ url
+      & jenkinsPort .~ port
+      & jenkinsUser .~ user
+      & jenkinsApiToken .~ token))
   parseJSON _ = empty
 
 readConfig :: IO ConnectInfo

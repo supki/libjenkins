@@ -32,7 +32,12 @@ main :: IO ()
 main = do
   -- more useful help on error
   host:port:user:pass:o:n:_ <- getArgs
-  let opts = Options (ConnectInfo host (read port) (fromString user) (fromString pass)) (fromString o) (fromString n)
+  let cinf = defaultConnectInfo
+        & jenkinsUrl .~ host
+        & jenkinsPort .~ read port
+        & jenkinsUser .~ fromString user
+        & jenkinsApiToken .~ fromString pass
+      opts = Options cinf (fromString o) (fromString n)
   res <- rename opts
   case res of
     Result _ -> Text.putStrLn "Done."

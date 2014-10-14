@@ -21,7 +21,11 @@ import           Text.Printf (printf)                      -- base
 main :: IO ()
 main = do
   user:pswd:host:port:regex:_ <- getArgs
-  jobs <- grep regex (ConnectInfo host (read port) (fromString user) (fromString pswd))
+  jobs <- grep regex $ defaultConnectInfo
+    & jenkinsUrl .~ host
+    & jenkinsPort .~ read port
+    & jenkinsUser .~ fromString user
+    & jenkinsApiToken .~ fromString pswd
   case jobs of
     [] -> throwingM _ExitFailure 1
     _  -> mapM_ Text.putStrLn jobs

@@ -22,12 +22,9 @@ spec = do
           , "}"
           ]
         config = Config
-          { _unConfig = Jenkins.ConnectInfo
-            { _jenkinsUrl = "http://example.com/jenkins"
-            , _jenkinsPort = 80
-            , _jenkinsUser = "jenkins"
-            , _jenkinsApiToken = "12345678"
-            }
+          { _unConfig = Jenkins.defaultConnectInfo
+            & jenkinsPort .~ 80
+            & jenkinsApiToken .~ "12345678"
           }
     decodeStrict (Text.encodeUtf8 configJson) `shouldHave` _Just.only config
 
@@ -40,11 +37,10 @@ spec = do
           , "}"
           ]
         customConfig = Config
-          { _unConfig = Jenkins.ConnectInfo
-            { _jenkinsUrl = "https://google.com/hudson"
-            , _jenkinsPort = 443
-            , _jenkinsUser = "google"
-            , _jenkinsApiToken = "87654321"
-            }
+          { _unConfig = Jenkins.defaultConnectInfo
+            & jenkinsUrl .~ "https://google.com/hudson"
+            & jenkinsPort .~ 443
+            & jenkinsUser .~ "google"
+            & jenkinsApiToken .~ "87654321"
           }
     decodeStrict (Text.encodeUtf8 customConfigText) `shouldHave` _Just.only customConfig

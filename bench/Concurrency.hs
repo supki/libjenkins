@@ -30,7 +30,11 @@ main :: IO ()
 main = do
   m:host:port:user:pass:_ <- getArgs
   ds <- descriptions (aggregate m) $
-    ConnectInfo host (read port) (Text.pack user) (Text.pack pass)
+    defaultConnectInfo
+    & jenkinsUrl .~ host
+    & jenkinsPort .~ read port
+    & jenkinsUser .~ Text.pack user
+    & jenkinsApiToken .~ Text.pack pass
   case ds of
     Result ds' -> mapM_ print ds'
     Disconnect -> die "disconnect!"

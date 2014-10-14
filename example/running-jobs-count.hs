@@ -19,7 +19,11 @@ import Text.Printf (printf)              -- base
 main :: IO ()
 main = do
   host:port:user:apiToken:_ <- getArgs
-  let creds = ConnectInfo host (read port) (fromString user) (fromString apiToken)
+  let creds = defaultConnectInfo
+        & jenkinsUrl .~ host
+        & jenkinsPort .~ read port
+        & jenkinsUser .~ fromString user
+        & jenkinsApiToken .~ fromString apiToken
   jobs <- runJenkins creds getJobs
   printf "Running jobs count: %d\n" (lengthOf (_Result.running) jobs)
 
