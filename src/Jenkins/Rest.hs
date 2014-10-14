@@ -29,11 +29,6 @@ module Jenkins.Rest
   , restart
   , forceRestart
     -- * Optics
-  , jenkinsUrl
-  , jenkinsPort
-  , jenkinsUser
-  , jenkinsApiToken
-  , jenkinsPassword
   , _Error
   , _Disconnect
   , _Result

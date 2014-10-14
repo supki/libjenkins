@@ -257,35 +257,26 @@ defaultConnectInfo = ConnectInfo
 class HasConnectInfo t where
   connectInfo :: Lens' t ConnectInfo
 
+  -- | A lens into Jenkins URL
+  jenkinsUrl :: HasConnectInfo t => Lens' t String
+  jenkinsUrl = connectInfo . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
+  {-# INLINE jenkinsUrl #-}
+
+  -- | A lens into Jenkins port
+  jenkinsPort :: HasConnectInfo t => Lens' t Int
+  jenkinsPort = connectInfo . \f x -> f (_jenkinsPort x) <&> \p -> x { _jenkinsPort = p }
+  {-# INLINE jenkinsPort #-}
+
+  -- | A lens into username to access the Jenkins instance with
+  jenkinsUser :: HasConnectInfo t => Lens' t Text
+  jenkinsUser = connectInfo . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
+  {-# INLINE jenkinsUser #-}
+
+  -- | A lens into user API token or password
+  jenkinsApiToken :: HasConnectInfo t => Lens' t Text
+  jenkinsApiToken = connectInfo . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
+  {-# INLINE jenkinsApiToken #-}
+
 instance HasConnectInfo ConnectInfo where
   connectInfo = id
   {-# INLINE connectInfo #-}
-
--- | A lens into Jenkins URL
-jenkinsUrl :: HasConnectInfo t => Lens' t String
-jenkinsUrl = connectInfo . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
-{-# INLINE jenkinsUrl #-}
-
--- | A lens into Jenkins port
-jenkinsPort :: HasConnectInfo t => Lens' t Int
-jenkinsPort = connectInfo . \f x -> f (_jenkinsPort x) <&> \p -> x { _jenkinsPort = p }
-{-# INLINE jenkinsPort #-}
-
--- | A lens into Jenkins user
-jenkinsUser :: HasConnectInfo t => Lens' t Text
-jenkinsUser = connectInfo . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
-{-# INLINE jenkinsUser #-}
-
--- | A lens into Jenkins user API token
-jenkinsApiToken :: HasConnectInfo t => Lens' t Text
-jenkinsApiToken = connectInfo . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
-{-# INLINE jenkinsApiToken #-}
-
--- | A lens into Jenkins password
---
--- @
--- jenkinsPassword = jenkinsApiToken
--- @
-jenkinsPassword :: HasConnectInfo t => Lens' t Text
-jenkinsPassword = jenkinsApiToken
-{-# INLINE jenkinsPassword #-}
