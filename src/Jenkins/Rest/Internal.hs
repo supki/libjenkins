@@ -105,7 +105,7 @@ runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkin
 
 runJenkinsInternal :: HasConnectInfo t => t -> Jenkins a -> IO (Maybe a)
 runJenkinsInternal (view connectInfo -> ConnectInfo h user token) jenk = do
-  url <- parseUrl h
+  url <- wrapJenkinsException (parseUrl h)
   withManager $ \m ->
     runReaderT (runMaybeT (iterJenkinsIO m jenk))
       . applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
@@ -154,10 +154,10 @@ interpreter
 interpreter man = go where
   go (Get m next) = do
     req <- lift ask
-    next (liftM responseBody (http (prepareGet m req) man) `withException` JenkinsHttpException)
+    next (wrapJenkinsException (liftM responseBody (http (prepareGet m req) man)))
   go (Post m body next) = do
     req <- lift ask
-    res <- lift . lift $ http (preparePost m body req) man `withException` JenkinsHttpException
+    res <- lift . lift $ wrapJenkinsException (http (preparePost m body req) man)
     ()  <- lift . lift $ C.closeResumableSource (responseBody res)
     next
   go (Conc ja jb next) = do
@@ -207,8 +207,11 @@ preparePost m body =
   statusCheck s@(Status st _) hs cookie_jar =
     if 200 <= st && st < 400 then Nothing else Just . toException $ StatusCodeException s hs cookie_jar
 
+wrapJenkinsException :: MonadCatch m => m a -> m a
+wrapJenkinsException m = m `withException` JenkinsHttpException
+
 withException :: (MonadCatch m, Exception e, Exception e') => m a -> (e -> e') -> m a
-withException io f = io `catch` \e -> throwM (f e)
+withException m f = m `catch` \e -> throwM (f e)
 
 
 -- | Default Jenkins connection settings

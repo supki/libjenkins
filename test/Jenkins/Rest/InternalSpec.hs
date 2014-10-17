@@ -13,7 +13,7 @@ import           System.IO.Error.Lens (errorType, _NoSuchThing)
 
 import qualified Jenkins.Rest as Helper
 import           Jenkins.Rest.Internal
-import           Network.HTTP.Conduit.Lens (_StatusCodeException, _TooManyRetries)
+import           Network.HTTP.Conduit.Lens (_StatusCodeException, _InvalidUrlException, _TooManyRetries)
 
 _JenkinsException :: Iso' JenkinsException HttpException
 _JenkinsException = iso (\(JenkinsHttpException e) -> e) JenkinsHttpException
@@ -31,6 +31,13 @@ spec = do
       Status 404 ""
      `through`
       _Error._JenkinsException._StatusCodeException._1
+
+    it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $
+      runJenkins (defaultConnectInfo & jenkinsUrl .~ "foo") (Helper.get "hi")
+     `shouldPerform`
+      ("foo", "Invalid URL")
+     `through`
+      _Error._JenkinsException._InvalidUrlException
 
     it "can catch 'HttpException' exceptions related from the queries" $
       runJenkins defaultConnectInfo
