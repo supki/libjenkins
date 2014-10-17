@@ -16,14 +16,12 @@ spec = do
   it "parses default configuration" $ do
     let configJson = Text.unlines
           [ "{ \"url\": \"http://example.com/jenkins\""
-          , ", \"port\": 80"
           , ", \"user\": \"jenkins\""
           , ", \"api-token\": \"12345678\""
           , "}"
           ]
         config = Config
           { _unConfig = Jenkins.defaultConnectInfo
-            & jenkinsPort .~ 80
             & jenkinsApiToken .~ "12345678"
           }
     decodeStrict (Text.encodeUtf8 configJson) `shouldHave` _Just.only config
@@ -31,7 +29,6 @@ spec = do
   it "parses custom configuration" $ do
     let customConfigText = Text.unlines
           [ "{ \"url\": \"https://google.com/hudson\""
-          , ", \"port\": 443"
           , ", \"user\": \"google\""
           , ", \"api-token\": \"87654321\""
           , "}"
@@ -39,7 +36,6 @@ spec = do
         customConfig = Config
           { _unConfig = Jenkins.defaultConnectInfo
             & jenkinsUrl .~ "https://google.com/hudson"
-            & jenkinsPort .~ 443
             & jenkinsUser .~ "google"
             & jenkinsApiToken .~ "87654321"
           }

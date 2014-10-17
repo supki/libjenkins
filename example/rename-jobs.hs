@@ -31,12 +31,11 @@ data Options = Options
 main :: IO ()
 main = do
   -- more useful help on error
-  host:port:user:pass:o:n:_ <- getArgs
+  url:user:token:o:n:_ <- getArgs
   let cinf = defaultConnectInfo
-        & jenkinsUrl .~ host
-        & jenkinsPort .~ read port
+        & jenkinsUrl .~ url
         & jenkinsUser .~ fromString user
-        & jenkinsApiToken .~ fromString pass
+        & jenkinsApiToken .~ fromString token
       opts = Options cinf (fromString o) (fromString n)
   res <- rename opts
   case res of

@@ -77,7 +77,6 @@ liftJ = Jenkins . liftF
 -- | Jenkins connection settings
 data ConnectInfo = ConnectInfo
   { _jenkinsUrl      :: String -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
-  , _jenkinsPort     :: Int    -- ^ Jenkins port, e.g. @8080@
   , _jenkinsUser     :: Text   -- ^ Jenkins user, e.g. @jenkins@
   , _jenkinsApiToken :: Text   -- ^ Jenkins user API token or password
   } deriving (Show, Eq, Typeable, Data, Generic)
@@ -105,11 +104,10 @@ runJenkins :: HasConnectInfo t => t -> Jenkins a -> IO (Result JenkinsException 
 runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkinsInternal conn jenk)
 
 runJenkinsInternal :: HasConnectInfo t => t -> Jenkins a -> IO (Maybe a)
-runJenkinsInternal (view connectInfo -> ConnectInfo h p user token) jenk = do
+runJenkinsInternal (view connectInfo -> ConnectInfo h user token) jenk = do
   url <- parseUrl h
   withManager $ \m ->
     runReaderT (runMaybeT (iterJenkinsIO m jenk))
-      . set Lens.port p
       . applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
       $ url
 
@@ -218,7 +216,6 @@ withException io f = io `catch` \e -> throwM (f e)
 -- @
 -- defaultConnectInfo = ConnectInfo
 --   { _jenkinsUrl      = \"http:\/\/example.com\/jenkins\"
---   , _jenkinsPort     = 8080
 --   , _jenkinsUser     = \"jenkins\"
 --   , _jenkinsApiToken = \"\"
 --   }
@@ -226,7 +223,6 @@ withException io f = io `catch` \e -> throwM (f e)
 defaultConnectInfo :: ConnectInfo
 defaultConnectInfo = ConnectInfo
   { _jenkinsUrl      = "http://example.com/jenkins"
-  , _jenkinsPort     = 8080
   , _jenkinsUser     = "jenkins"
   , _jenkinsApiToken = ""
   }
@@ -259,11 +255,6 @@ class HasConnectInfo t where
   jenkinsUrl :: HasConnectInfo t => Lens' t String
   jenkinsUrl = connectInfo . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
   {-# INLINE jenkinsUrl #-}
-
-  -- | A lens into Jenkins port
-  jenkinsPort :: HasConnectInfo t => Lens' t Int
-  jenkinsPort = connectInfo . \f x -> f (_jenkinsPort x) <&> \p -> x { _jenkinsPort = p }
-  {-# INLINE jenkinsPort #-}
 
   -- | A lens into username to access the Jenkins instance with
   jenkinsUser :: HasConnectInfo t => Lens' t Text

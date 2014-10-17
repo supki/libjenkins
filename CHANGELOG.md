@@ -5,6 +5,8 @@
 
   * Generalized `traverseC_` (again)
 
+  * Removed redundant `jenkinsPort` option: `jenkinsUrl` handles port numbers well enough
+
 0.5.0
 =====
 

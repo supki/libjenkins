@@ -28,13 +28,12 @@ type Aggregate a b = (a -> Jenkins b) -> [a] -> Jenkins [b]
 
 main :: IO ()
 main = do
-  m:host:port:user:pass:_ <- getArgs
+  m:url:user:token:_ <- getArgs
   ds <- descriptions (aggregate m) $
     defaultConnectInfo
-    & jenkinsUrl .~ host
-    & jenkinsPort .~ read port
+    & jenkinsUrl .~ url
     & jenkinsUser .~ Text.pack user
-    & jenkinsApiToken .~ Text.pack pass
+    & jenkinsApiToken .~ Text.pack token
   case ds of
     Result ds' -> mapM_ print ds'
     Disconnect -> die "disconnect!"

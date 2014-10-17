@@ -22,12 +22,10 @@ newtype Config = Config { _unConfig :: ConnectInfo }
 instance FromJSON Config where
   parseJSON (Object o) = do
     url   <- o .: "url"
-    port  <- o .: "port"
     user  <- o .: "user"
     token <- o .: "api-token"
     return (Config (defaultConnectInfo
       & jenkinsUrl .~ url
-      & jenkinsPort .~ port
       & jenkinsUser .~ user
       & jenkinsApiToken .~ token))
   parseJSON _ = empty
