@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 module Jenkins.RestSpec (spec) where
 
 import           Control.Applicative
@@ -37,8 +38,8 @@ spec = do
   context "GET requests" $
     it "get sends GET requests" $ do
       interpret $ do
-        let getS :: Rest.Method Rest.Complete f -> Jenkins (ResourceT IO (C.ResumableSource (ResourceT IO) Strict.ByteString))
-            getS = Rest.getS
+        let getS :: (forall f. Rest.Method Rest.Complete f) -> Jenkins (ResourceT IO (C.ResumableSource (ResourceT IO) Strict.ByteString))
+            getS = Rest.getS Rest.plain
         getS "foo"
         getS "bar"
         getS "baz"
@@ -92,7 +93,7 @@ interpret adt = evalState (iterJenkins go ([] <$ adt)) (Requests [0..]) where
   go Dcon =
     return [QDisconnect]
 
-render :: (a -> Strict.ByteString -> Query) -> Rest.Method f x -> State (Requests a) Query
+render :: (a -> Strict.ByteString -> Query) -> Rest.Method Method.Complete f -> State (Requests a) Query
 render f m = do
   n <- next
   return $ f n (Method.render m)

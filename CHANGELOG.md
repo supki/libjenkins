@@ -7,6 +7,10 @@
 
   * Removed redundant `jenkinsPort` option: `jenkinsUrl` handles port numbers well enough
 
+  * Reworked API method construction. The new version is safer (it's impossible to forget
+    to specify the format of the response), less magical (format is a separate argument to
+    the query function), and has fewer corner cases
+
 0.5.0
 =====
 

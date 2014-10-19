@@ -1,4 +1,6 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 module Jenkins.Rest.Method.InternalSpec where
 
 import Test.Hspec
@@ -6,26 +8,19 @@ import Test.Hspec
 import Jenkins.Rest.Method.Internal
 import Jenkins.Rest.Method
 
-
 spec :: Spec
 spec =
-  describe "render" $ do
+  describe "render" $
 
     it "has a bunch of example input/output pairs" $ do
 
-      render ("" `as` xml)
+      format xml ""
         `shouldBe` "api/xml"
 
-      render xml
-        `shouldBe` "api/xml"
-
-      render ("job" -/- 7 `as` xml)
+      format xml ("job" -/- 7)
         `shouldBe` "job/7/api/xml"
 
-      render ("job" -/- 7 `as` xml)
-        `shouldBe` "job/7/api/xml"
-
-      render ("job" -/- 7 `as` json)
+      format json ("job" -/- 7)
         `shouldBe` "job/7/api/json"
 
       render (text "restart")
@@ -37,8 +32,8 @@ spec =
       render ("job" -?- "name" -&- "title" -=- "bar")
         `shouldBe` "job?name&title=bar"
 
-      render ("job" -/- 7 `as` json -?- "name" -&- "title" -=- "bar")
+      format json ("job" -/- 7 -?- "name" -&- "title" -=- "bar")
         `shouldBe` "job/7/api/json?name&title=bar"
 
-      render ("job" -/- "ДМИТРИЙ" `as` xml)
+      format xml ("job" -/- "ДМИТРИЙ")
         `shouldBe` "job/%D0%94%D0%9C%D0%98%D0%A2%D0%A0%D0%98%D0%99/api/xml"

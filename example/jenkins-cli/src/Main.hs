@@ -53,12 +53,12 @@ withJobs j = getJobs >>= traverse_ j
 
 getJobs :: Jenkins [Text]
 getJobs = do
-  res <- get (json -?- "tree" -=- "jobs[name]")
+  res <- get json ("/" -?- "tree" -=- "jobs[name]")
   return $ res ^.. key "jobs".values.key "name"._String
 
 grepJobs :: [Greppable] -> Jenkins ()
 grepJobs greppables = do
-  json_root <- get (json -?- "tree" -=- "jobs[name,description,color]")
+  json_root <- get json ("/" -?- "tree" -=- "jobs[name,description,color]")
   liftIO $ do
     let jobs = json_root ^.. key "jobs".values
     filtered_jobs <- applyFilters (map grep greppables) jobs
@@ -84,7 +84,7 @@ withJobsOrHandle doThing _      xs =
 
 getJob :: Text -> Jenkins ()
 getJob name = do
-  config <- XML.parseLBS_ XML.def <$> get (job name -/-  "config.xml")
+  config <- XML.parseLBS_ XML.def <$> get plain (job name -/-  "config.xml")
   liftIO (Lazy.putStrLn (XML.renderText XML.def { XML.rsPretty = True } config))
 
 enableJob :: Text -> Jenkins ()
@@ -100,7 +100,7 @@ deleteJob :: Text -> Jenkins ()
 deleteJob = withJob "doDelete"
 
 waitJobs :: Jenkins ()
-waitJobs = get (queue `as` json) >>= liftIO . printJobs
+waitJobs = get json queue >>= liftIO . printJobs
  where printJobs info = mapM_ Text.putStrLn (info ^.. key "items".values.key "task".key "name"._String)
 
 withJob :: (forall f. Method Complete f) -> Text -> Jenkins ()

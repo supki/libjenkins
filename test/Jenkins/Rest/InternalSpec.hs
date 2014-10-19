@@ -26,14 +26,14 @@ spec = do
 
   describe "runJenkins" $ do
     it "wraps uncatched 'HttpException' exceptions from the queries in 'Error'" $
-      runJenkins defaultConnectInfo (Helper.get "hi")
+      runJenkins defaultConnectInfo (Helper.get Helper.plain "hi")
      `shouldPerform`
       Status 404 ""
      `through`
       _Error._JenkinsException._StatusCodeException._1
 
     it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $
-      runJenkins (defaultConnectInfo & jenkinsUrl .~ "foo") (Helper.get "hi")
+      runJenkins (defaultConnectInfo & jenkinsUrl .~ "foo") (Helper.get Helper.plain "hi")
      `shouldPerform`
       ("foo", "Invalid URL")
      `through`
@@ -41,7 +41,7 @@ spec = do
 
     it "can catch 'HttpException' exceptions related from the queries" $
       runJenkins defaultConnectInfo
-        (liftJ (Or (Helper.get "hi" >> return 4) (return 7)))
+        (liftJ (Or (Helper.get Helper.plain "hi" >> return 4) (return 7)))
      `shouldPerform`
       7
      `through`

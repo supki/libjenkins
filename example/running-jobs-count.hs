@@ -27,7 +27,7 @@ main = do
   printf "Running jobs count: %d\n" (lengthOf (_Result.running) jobs)
 
 getJobs :: Jenkins ByteString
-getJobs = get (json -?- "tree" -=- "jobs[color]")
+getJobs = get json ("/" -?- "tree" -=- "jobs[color]")
 
 running :: Fold ByteString ()
 running = key "jobs".values.key "color"._String.only "blue_anime"

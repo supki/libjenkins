@@ -12,13 +12,14 @@ module Jenkins.Rest
   , defaultConnectInfo
     -- ** Combinators
   , get
-  , getS
   , post
   , post_
   , concurrently
   , orElse
   , liftIO
   , with
+    -- *** Low-level
+  , getS
     -- ** Method
   , module Jenkins.Rest.Method
     -- ** Convenience
@@ -53,27 +54,37 @@ import           Text.XML (Document, renderLBS, def)
 
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
+import           Jenkins.Rest.Method.Internal
 import           Network.HTTP.Conduit.Lens
 
 
 -- | @GET@ query
 --
--- While the return type is a lazy bytestring, the entire response
--- sits in memory anyway: lazy I/O is not used
-get :: Method Complete f -> Jenkins Lazy.ByteString
-get m = do
-  ms <- getS m
+-- While the return type is the lazy @Bytestring@, the entire response
+-- sits in the memory anyway: lazy I/O is not used at the least
+get :: Formatter f -> (forall g. Method Complete g) -> Jenkins Lazy.ByteString
+get f m = do
+  ms <- getS f m
   liftIO $ fmap Lazy.fromChunks . runResourceT $ do
     s <- ms
     s $$+- CL.consume
 
--- | @GET@ query
+-- |
 --
--- If you don't close the source eventually (either explicitly with
+-- 'getS' prepares an action to run to make a @GET@ query to the Jenkins instance.
+-- The function provides an option of tight control over sending queries and consuming responses;
+-- unless you really need it, you'll be better served by the simpler 'get' function
+--
+-- /Note:/ if you don't close the source eventually (either explicitly with
 -- 'Data.Conduit.closeResumableSource' or implicitly by reading from it)
 -- it will leak a socket.
-getS :: (MonadCatch m, MonadResource m) => Method Complete f -> Jenkins (m (ResumableSource m Strict.ByteString))
-getS m = liftJ (Get m (\x -> x))
+getS
+  :: (MonadCatch m, MonadResource m)
+  => Formatter f
+  -> (forall g. Method Complete g)
+  -> Jenkins (m (ResumableSource m Strict.ByteString))
+getS (Formatter f) m = liftJ (Get (f m) (\x -> x))
+{-# ANN getS ("HLint: ignore Use id" :: String) #-}
 
 -- | @POST@ query (with a payload)
 post :: (forall f. Method Complete f) -> Lazy.ByteString -> Jenkins ()

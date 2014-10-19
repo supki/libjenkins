@@ -33,7 +33,7 @@ main = do
 grep :: String -> ConnectInfo -> IO [Text]
 grep regex conn = do
   jobs <- runJenkins conn $
-    get (json -?- "tree" -=- "jobs[name]") <&> \res -> res ^.. key "jobs".values.key "name"._String
+    get json ("/" -?- "tree" -=- "jobs[name]") <&> \res -> res ^.. key "jobs".values.key "name"._String
   filterM (match regex) (jobs ^.. _Result.folded)
 
 -- | Match job name again Perl regex

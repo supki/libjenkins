@@ -1,12 +1,6 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE RankNTypes #-}
 -- | Jenkins REST API method construction
 module Jenkins.Rest.Method
   ( -- * API methods
@@ -20,15 +14,15 @@ module Jenkins.Rest.Method
   , text, int
   , (-?-), (-/-), (-=-), (-&-)
   , query
-  , as
-  , JSONy(..)
-  , XMLy(..)
-  , Pythony(..)
+  , Formatter
+  , json
+  , xml
+  , python
+  , plain
     -- * Types
   , Method
   , Type(..)
   , Format
-  , As
   ) where
 
 import Data.Text (Text)
@@ -41,7 +35,6 @@ import Jenkins.Rest.Method.Internal
 
 
 infix  1 -?-
-infix  3 `as`
 infix  7 -=-
 infixr 5 -/-, -&-
 
@@ -56,103 +49,101 @@ int = fromInteger
 
 -- | Combine 2 paths
 (-/-) :: Method Complete f -> Method Complete f -> Method Complete f
-(-/-) = (:~/)
+(-/-) = (:/)
 
 -- | Combine 2 queries
 (-&-) :: Method Query f -> Method Query f -> Method Query f
-(-&-) = (:~&)
+(-&-) = (:&)
 
 -- | Make a field-value pair
 (-=-) :: Text -> Text -> Method Query f
-x -=- y = x :~= Just y
+x -=- y = x := Just y
 
--- | Choose response format
-as :: Method Complete f -> As f -> Method Complete f
-as = (:~@)
+-- | Asks Jenkins to render the response as a JSON document
+--
+-- >>> format json ("foo" -/- "bar")
+-- "foo/bar/api/json"
+json :: Formatter Json
+json = Formatter (\m -> m :@ SJson)
+{-# ANN json ("HLint: ignore Avoid lambda" :: String) #-}
 
--- | JSON response format
-class JSONy t where
-  json :: t JSON
+-- | Asks Jenkins to render the response as an XML document
+--
+-- >>> format xml ("foo" -/- "bar")
+-- "foo/bar/api/xml"
+xml :: Formatter Xml
+xml = Formatter (\m -> m :@ SXml)
+{-# ANN xml ("HLint: ignore Avoid lambda" :: String) #-}
 
-instance JSONy As where
-  json = AsJSON
+-- | Asks Jenkins to render the response as a Python dictionary
+--
+-- >>> format python ("foo" -/- "bar")
+-- "foo/bar/api/python"
+python :: Formatter Python
+python = Formatter (\m -> m :@ SPython)
+{-# ANN python ("HLint: ignore Avoid lambda" :: String) #-}
 
-instance t ~ Complete => JSONy (Method t) where
-  json = "" `as` json
-
--- | XML response format
-class XMLy t where
-  xml :: t XML
-
-instance XMLy As where
-  xml = AsXML
-
-instance t ~ Complete => XMLy (Method t) where
-  xml = "" `as` xml
-
--- | Python response format
-class Pythony t where
-  python :: t Python
-
-instance Pythony As where
-  python = AsPython
-
-instance t ~ Complete => Pythony (Method t) where
-  python = "" `as` python
+-- | The formatter that does nothing
+--
+-- >>> format plain ("foo" -/- "bar")
+-- "foo/bar"
+plain :: Formatter f
+plain = Formatter (\m -> m)
+{-# ANN plain ("HLint: ignore Use id" :: String) #-}
 
 -- | Combine path and query
 (-?-) :: Method Complete f -> Method Query f -> Method Complete f
-(-?-) = (:~?)
+(-?-) = (:?)
 
 -- | List-to-query convenience combinator
 --
--- >>> render (query [("foo", Nothing), ("bar", Just "baz"), ("quux", Nothing)])
+-- >>> renderQ' (query [("foo", Nothing), ("bar", Just "baz"), ("quux", Nothing)])
 -- "foo&bar=baz&quux"
 --
--- >>> render (query [])
+-- >>> renderQ' (query [])
 -- ""
 query :: [(Text, Maybe Text)] -> Method Query f
 query [] = Empty
-query xs = foldr1 (:~&) (map (uncurry (:~=)) xs)
+query xs = foldr1 (:&) (map (uncurry (:=)) xs)
 
 -- | Job information
 --
--- >>> render (job "name" `as` json)
+-- >>> format json (job "name")
 -- "job/name/api/json"
 job :: Text -> Method Complete f
 job name = "job" -/- text name
 
 -- | Job build information
 --
--- >>> render (build "name" 4 `as` json)
+-- >>> format json (build "name" 4)
 -- "job/name/4/api/json"
 build :: Integral a => Text -> a -> Method Complete f
 build name num = "job" -/- text name -/- int (toInteger num)
 
 -- | View information
 --
--- >>> render (view "name" `as` xml)
+-- >>> format xml (view "name")
 -- "view/name/api/xml"
 view :: Text -> Method Complete f
 view name = "view" -/- text name
 
 -- | Build queue information
 --
--- >>> render (queue `as` python)
+-- >>> format python queue
 -- "queue/api/python"
 queue :: Method Complete f
 queue = "queue"
 
 -- | Statistics
 --
--- >>> render (overallLoad `as` xml)
+-- >>> format xml overallLoad
 -- "overallLoad/api/xml"
 overallLoad :: Method Complete f
 overallLoad = "overallLoad"
 
 -- | Nodes information
 --
--- >>> render (computer `as` python)
+-- >>> format python computer
 -- "computer/api/python"
 computer :: Method Complete f
 computer = "computer"
