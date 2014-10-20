@@ -1,92 +1,114 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_HADDOCK hide #-}
 -- | Jenkins REST API interface internals
 module Jenkins.Rest.Internal where
 
 import           Control.Applicative
-import           Control.Concurrent.Async (concurrently)
+import           Control.Concurrent.Async.Lifted (concurrently)
 import           Control.Lens
 import           Control.Monad
-import           Control.Monad.Catch (MonadCatch, Exception(..), try, catch, throwM)
-import           Control.Monad.Free.Church (F, iterM, liftF)
+import           Control.Monad.Catch (MonadCatch, Exception(..), catch, throwM)
+import           Control.Monad.Free.Church (liftF)
+import           Control.Monad.Error (MonadError(..))
 import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Trans.Class (lift)
-import           Control.Monad.Trans.Control (MonadTransControl(..))
-import           Control.Monad.Trans.Reader (ReaderT, runReaderT, ask, local)
+import           Control.Monad.Reader (MonadReader(..))
+import           Control.Monad.State (MonadState(..))
+import           Control.Monad.Trans.Free.Church (FT, iterTM)
+import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans.Control (MonadTransControl(..), MonadBaseControl(..))
+import           Control.Monad.Trans.Reader (ReaderT)
+import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.Resource (ResourceT, MonadResource)
 import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
+import           Control.Monad.Writer (MonadWriter(..))
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString as Strict
 import           Data.Conduit (ResumableSource)
 import qualified Data.Conduit as C
-import           Data.Data (Data, Typeable)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import           GHC.Generics (Generic)
+import           Data.Typeable (Typeable)
 import           Network.HTTP.Conduit
 import           Network.HTTP.Types (Status(..))
 
 import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
 import qualified Network.HTTP.Conduit.Lens as Lens
 
-{-# ANN module ("HLint: ignore Use const" :: String) #-}
 {-# ANN module ("HLint: ignore Use join" :: String) #-}
 
 
 -- | Jenkins REST API query sequence description
-newtype Jenkins a = Jenkins { unJenkins :: F JenkinsF a }
-  deriving (Functor, Applicative, Monad)
+newtype JenkinsT m a = JenkinsT { unJenkinsT :: FT (JenkinsF m) m a }
+  deriving (Functor)
 
-instance MonadIO Jenkins where
-  liftIO = liftJ . IO
+instance MonadIO m => MonadIO (JenkinsT m) where
+  liftIO = JenkinsT . liftIO
+
+instance MonadTrans JenkinsT where
+  lift = JenkinsT . lift
+
+instance Applicative (JenkinsT m) where
+  pure = JenkinsT . pure
+  JenkinsT f <*> JenkinsT x = JenkinsT (f <*> x)
+
+instance Monad (JenkinsT m) where
+  return = JenkinsT . return
+  JenkinsT m >>= k = JenkinsT (m >>= unJenkinsT . k)
+
+instance MonadReader r m => MonadReader r (JenkinsT m) where
+  ask = JenkinsT ask
+  local f = JenkinsT . local f . unJenkinsT
+
+instance MonadWriter w m => MonadWriter w (JenkinsT m) where
+  tell = JenkinsT . tell
+  listen = JenkinsT . listen . unJenkinsT
+  pass = JenkinsT . pass . unJenkinsT
+  writer = JenkinsT . writer
+
+instance MonadState s m => MonadState s (JenkinsT m) where
+  get = JenkinsT get
+  put = JenkinsT . put
+  state = JenkinsT . state
+
+instance MonadError e m => MonadError e (JenkinsT m) where
+  throwError = JenkinsT . throwError
+  m `catchError` f = JenkinsT (unJenkinsT m `catchError` (unJenkinsT . f))
+
 
 -- | Jenkins REST API query
-data JenkinsF a where
+data JenkinsF m a where
   Get
     :: Method Complete f
     -> (((MonadResource m, MonadCatch m) => m (ResumableSource m Strict.ByteString)) -> a)
-    -> JenkinsF a
-  Post :: (forall f. Method Complete f) -> ByteString -> a -> JenkinsF a
-  Conc :: Jenkins a -> Jenkins b -> (a -> b -> c) -> JenkinsF c
-  Or   :: Jenkins a -> Jenkins a -> JenkinsF a
-  IO   :: IO a -> JenkinsF a
-  With :: (Request -> Request) -> Jenkins b -> (b -> a) -> JenkinsF a
-  Dcon :: JenkinsF a
+    -> JenkinsF n a
+  Post :: (forall f. Method Complete f) -> ByteString -> a -> JenkinsF m a
+  Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JenkinsF m c
+  Or   :: JenkinsT m a -> JenkinsT m a -> JenkinsF m a
+  With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JenkinsF m a
+  Dcon :: JenkinsF m a
 
-instance Functor JenkinsF where
+instance Functor (JenkinsF m) where
   fmap f (Get  m g)      = Get  m      (f . g)
   fmap f (Post m body a) = Post m body (f a)
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
   fmap f (Or a b)        = Or (fmap f a) (fmap f b)
-  fmap f (IO a)          = IO (fmap f a)
   fmap f (With h j g)    = With h j    (f . g)
   fmap _ Dcon            = Dcon
 
--- | Lift 'JenkinsF' to 'Jenkins'
-liftJ :: JenkinsF a -> Jenkins a
-liftJ = Jenkins . liftF
+-- | Lift 'JenkinsF' to 'JenkinsT'
+liftJ :: JenkinsF m a -> JenkinsT m a
+liftJ = JenkinsT . liftF
 
--- | Jenkins connection settings
-data ConnectInfo = ConnectInfo
-  { _jenkinsUrl      :: String -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
-  , _jenkinsUser     :: Text   -- ^ Jenkins user, e.g. @jenkins@
-  , _jenkinsApiToken :: Text   -- ^ Jenkins user API token or password
-  } deriving (Show, Eq, Typeable, Data, Generic)
-
--- | The result of Jenkins REST API queries
-data Result e v =
-    Error e    -- ^ Exception @e@ was thrown while querying Jenkins
-  | Disconnect -- ^ The client was explicitly disconnected
-  | Result v   -- ^ Querying successfully finished the with value @v@
-    deriving (Show, Eq, Ord, Typeable, Data, Generic)
 
 newtype JenkinsException
   = JenkinsHttpException HttpException
@@ -94,104 +116,95 @@ newtype JenkinsException
 
 instance Exception JenkinsException
 
--- | Query Jenkins API using 'Jenkins' description
---
--- Successful result is either 'Disconnect' or @ 'Result' v @
---
--- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
--- and wraps in 'Error'. Other exceptions are /not/ catched
-runJenkins :: HasConnectInfo t => t -> Jenkins a -> IO (Result JenkinsException a)
-runJenkins conn jenk = either Error (maybe Disconnect Result) <$> try (runJenkinsInternal conn jenk)
 
-runJenkinsInternal :: HasConnectInfo t => t -> Jenkins a -> IO (Maybe a)
-runJenkinsInternal (view connectInfo -> ConnectInfo h user token) jenk = do
+runJenkinsInternal
+  :: (MonadIO m, MonadBaseControl IO m, MonadCatch m)
+  => String -> Text -> Text -> JenkinsT m a -> m (Maybe a)
+runJenkinsInternal h user token jenk = do
   url <- wrapJenkinsException (parseUrl h)
   withManager $ \m ->
-    runReaderT (runMaybeT (iterJenkinsIO m jenk))
+    Reader.runReaderT (runMaybeT (runInterpT (iterJenkinsIO m jenk)))
       . applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
       $ url
 
 
--- | A prism into Jenkins error
-_Error :: Prism (Result e a) (Result e' a) e e'
-_Error = prism Error $ \case
-  Error e    -> Right e
-  Disconnect -> Left Disconnect
-  Result a   -> Left (Result a)
-{-# INLINE _Error #-}
+newtype InterpT m a = InterpT
+  { runInterpT :: MaybeT (ReaderT Request (ResourceT m)) a
+  } deriving (Functor)
 
--- | A prism into disconnect
-_Disconnect :: Prism' (Result e a) ()
-_Disconnect = prism' (\_ -> Disconnect) $ \case
-  Disconnect -> Just ()
-  _          -> Nothing
-{-# INLINE _Disconnect #-}
+instance (Functor m, Monad m) => Applicative (InterpT m) where
+  pure = return
+  (<*>) = ap
 
--- | A prism into result
-_Result :: Prism (Result e a) (Result e b) a b
-_Result = prism Result $ \case
-  Error e    -> Left (Error e)
-  Disconnect -> Left Disconnect
-  Result a   -> Right a
-{-# INLINE _Result #-}
+instance Monad m => Monad (InterpT m) where
+  return = InterpT . return
+  InterpT m >>= k = InterpT (m >>= runInterpT . k)
+
+instance (Functor m, Monad m) => Alternative (InterpT m) where
+  empty = mzero
+  (<|>) = mplus
+
+instance Monad m => MonadPlus (InterpT m) where
+  mzero = InterpT mzero
+  InterpT x `mplus` InterpT y = InterpT (x `mplus` y)
+
+instance MonadTrans InterpT where
+  lift = InterpT . lift . lift . lift
 
 -- | Interpret 'JenkinsF' AST in 'IO'
-iterJenkinsIO
-  :: Manager
-  -> Jenkins a
-  -> MaybeT (ReaderT Request (ResourceT IO)) a
+iterJenkinsIO :: (MonadIO m, MonadBaseControl IO m, MonadCatch m) => Manager -> JenkinsT m a -> InterpT m a
 iterJenkinsIO manager = iterJenkins (interpreter manager)
 
 -- | Tear down 'JenkinsF' AST with a 'JenkinsF'-algebra
-iterJenkins :: Monad m => (JenkinsF (m a) -> m a) -> Jenkins a -> m a
-iterJenkins go = iterM go . unJenkins
+iterJenkins
+  :: (Monad m, Monad (t m), MonadTrans t)
+  => (JenkinsF m (t m a) -> t m a) -> JenkinsT m a -> t m a
+iterJenkins go = iterTM go . unJenkinsT
 
 -- | 'JenkinsF' AST interpreter
 interpreter
-  :: Manager
-  -> JenkinsF (MaybeT (ReaderT Request (ResourceT IO)) a)
-  -> MaybeT (ReaderT Request (ResourceT IO)) a
+  :: forall m a. (MonadIO m, MonadBaseControl IO m, MonadCatch m)
+  => Manager
+  -> JenkinsF m (InterpT m a) -> InterpT m a
 interpreter man = go where
-  go (Get m next) = do
-    req <- lift ask
-    next (wrapJenkinsException (liftM responseBody (http (prepareGet m req) man)))
-  go (Post m body next) = do
-    req <- lift ask
+  go :: JenkinsF m (InterpT m a) -> InterpT m a
+  go (Get m next) = InterpT $ do
+    req <- lift Reader.ask
+    runInterpT (next (wrapJenkinsException (liftM responseBody (http (prepareGet m req) man))))
+  go (Post m body next) = InterpT $ do
+    req <- lift Reader.ask
     res <- lift . lift $ wrapJenkinsException (http (preparePost m body req) man)
     ()  <- lift . lift $ C.closeResumableSource (responseBody res)
-    next
+    runInterpT next
   go (Conc ja jb next) = do
-    (a, b) <- intoIO man $ \run -> concurrently (run ja) (run jb)
-    c      <- outoIO (return a)
-    d      <- outoIO (return b)
+    (a, b) <- intoM man $ \run -> concurrently (run ja) (run jb)
+    c      <- outoM (return a)
+    d      <- outoM (return b)
     next c d
   go (Or ja jb) = do
-    res  <- intoIO man $ \run -> run ja `catch` \(JenkinsHttpException _) -> run jb
-    next <- outoIO (return res)
+    res  <- intoM man $ \run -> run ja `catch` \(JenkinsHttpException _) -> run jb
+    next <- outoM (return res)
     next
-  go (IO action) = join (liftIO action)
-  go (With f jenk next) = do
-    res <- mapMaybeT (local f) (iterJenkinsIO man jenk)
-    next res
+  go (With f jenk next) = InterpT $ do
+    res <- mapMaybeT (Reader.local f) (runInterpT (iterJenkinsIO man jenk))
+    runInterpT (next res)
   go Dcon = mzero
 
-intoIO
-  :: Monad m
+intoM
+  :: forall m a. (MonadIO m, MonadBaseControl IO m, MonadCatch m)
   => Manager
-  -> ((forall b. Jenkins b -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT b)))) -> m a)
-  -> MaybeT (ReaderT Request (ResourceT m)) a
-intoIO m f =
+  -> ((forall b. JenkinsT m b -> m (StT ResourceT (StT (ReaderT Request) (StT MaybeT b)))) -> m a)
+  -> InterpT m a
+intoM m f = InterpT $
   liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
     let
-      run :: Jenkins t -> IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
-      run = run''' . run'' . run' . iterJenkinsIO m
+      run :: JenkinsT m t -> m (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
+      run = run''' . run'' . run' . runInterpT . iterJenkinsIO m
     in
       f run
 
-outoIO
-  :: IO (StT ResourceT (StT (ReaderT Request) (StT MaybeT b)))
-  -> MaybeT (ReaderT Request (ResourceT IO)) b
-outoIO = restoreT . restoreT . restoreT
+outoM :: Monad m => m (StT ResourceT (StT (ReaderT Request) (StT MaybeT b))) -> InterpT m b
+outoM = InterpT . restoreT . restoreT . restoreT
 
 prepareGet :: Method Complete f -> Request -> Request
 prepareGet m = set Lens.method "GET" . over Lens.path (`slash` render m)
@@ -212,63 +225,3 @@ wrapJenkinsException m = m `withException` JenkinsHttpException
 
 withException :: (MonadCatch m, Exception e, Exception e') => m a -> (e -> e') -> m a
 withException m f = m `catch` \e -> throwM (f e)
-
-
--- | Default Jenkins connection settings
---
--- @
--- defaultConnectInfo = ConnectInfo
---   { _jenkinsUrl      = \"http:\/\/example.com\/jenkins\"
---   , _jenkinsUser     = \"jenkins\"
---   , _jenkinsApiToken = \"\"
---   }
--- @
-defaultConnectInfo :: ConnectInfo
-defaultConnectInfo = ConnectInfo
-  { _jenkinsUrl      = "http://example.com/jenkins"
-  , _jenkinsUser     = "jenkins"
-  , _jenkinsApiToken = ""
-  }
-
--- | Convenience class aimed at elimination of long
--- chains of lenses to access jenkins connection configuration
---
--- For example, if you have a configuration record in your application:
---
--- @
--- data Config = Config
---   { ...
---   , _jenkinsConnectInfo :: ConnectInfo
---   , ...
---   }
--- @
---
--- you can make it an instance of 'HasConnectInfo':
---
--- @
--- instance HasConnectInfo Config where
---   connectInfo f x = (\p -> x { _jenkinsConnectInfo = p }) \<$\> f (_jenkinsConnectInfo x)
--- @
---
--- and then use e.g. @view jenkinsUrl config@ to get the url part of the jenkins connection
-class HasConnectInfo t where
-  connectInfo :: Lens' t ConnectInfo
-
-  -- | A lens into Jenkins URL
-  jenkinsUrl :: HasConnectInfo t => Lens' t String
-  jenkinsUrl = connectInfo . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
-  {-# INLINE jenkinsUrl #-}
-
-  -- | A lens into username to access the Jenkins instance with
-  jenkinsUser :: HasConnectInfo t => Lens' t Text
-  jenkinsUser = connectInfo . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
-  {-# INLINE jenkinsUser #-}
-
-  -- | A lens into user API token or password
-  jenkinsApiToken :: HasConnectInfo t => Lens' t Text
-  jenkinsApiToken = connectInfo . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
-  {-# INLINE jenkinsApiToken #-}
-
-instance HasConnectInfo ConnectInfo where
-  connectInfo = id
-  {-# INLINE connectInfo #-}

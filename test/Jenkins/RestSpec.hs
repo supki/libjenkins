@@ -9,6 +9,7 @@ import           Control.Monad.Trans.Resource (ResourceT)
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.Conduit as C
+import           Data.Functor.Identity (Identity)
 import           Data.Monoid (mempty)
 import           Test.Hspec
 import qualified Jenkins.Rest as Rest
@@ -38,7 +39,7 @@ spec = do
   context "GET requests" $
     it "get sends GET requests" $ do
       interpret $ do
-        let getS :: (forall f. Rest.Method Rest.Complete f) -> Jenkins (ResourceT IO (C.ResumableSource (ResourceT IO) Strict.ByteString))
+        let getS :: (forall f. Rest.Method Rest.Complete f) -> JenkinsT Identity (ResourceT IO (C.ResumableSource (ResourceT IO) Strict.ByteString))
             getS = Rest.getS Rest.plain
         getS "foo"
         getS "bar"
@@ -81,9 +82,9 @@ data Query =
 newtype Requests a = Requests [a]
   deriving (Show, Eq)
 
-interpret :: Rest.Jenkins a -> [Query]
+interpret :: Rest.JenkinsT Identity a -> [Query]
 interpret adt = evalState (iterJenkins go ([] <$ adt)) (Requests [0..]) where
-  go :: JenkinsF (State (Requests Int) [Query]) -> State (Requests Int) [Query]
+  go :: JenkinsF Identity (State (Requests Int) [Query]) -> State (Requests Int) [Query]
   go (Get m n) = do
     r <- render QGet m
     fmap (r :) (n (return (C.newResumableSource (C.yield mempty))))

@@ -1,6 +1,8 @@
 0.6.0
 =====
 
+  * Switched to the transformer version of the Church-encoded free monad
+
   * Generalized `getS`. As a side-effect, `get` doesn't leak like crazy anymore
 
   * Generalized `traverseC_` (again)
