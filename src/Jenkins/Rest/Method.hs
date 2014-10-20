@@ -22,7 +22,7 @@ module Jenkins.Rest.Method
     -- * Types
   , Method
   , Type(..)
-  , Format
+  , Format(..)
   ) where
 
 import Data.Text (Text)
