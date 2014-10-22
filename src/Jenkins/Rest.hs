@@ -27,7 +27,7 @@ module Jenkins.Rest
     -- ** Method
   , module Jenkins.Rest.Method
     -- ** Convenience
-  , postXML
+  , postXml
   , traverseC
   , traverseC_
   , reload
@@ -229,8 +229,8 @@ with :: (Request -> Request) -> JenkinsT m a -> JenkinsT m a
 with f j = liftJ $ With f j id
 
 -- | @POST@ job's @config.xml@ (or any other xml, really) in @xml-conduit@ format
-postXML :: (forall f. Method Complete f) -> Document -> JenkinsT m ()
-postXML m = with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
+postXml :: (forall f. Method Complete f) -> Document -> JenkinsT m ()
+postXml m = with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
 
 -- | Make a bunch of queries 'concurrently'
 traverseC :: (a -> JenkinsT m b) -> [a] -> JenkinsT m [b]

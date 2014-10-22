@@ -1,6 +1,8 @@
 0.6.0
 =====
 
+  * Renamed `postXML` to `postXml`
+
   * Switched to the transformer version of the Church-encoded free monad
 
   * Generalized `getS`. As a side-effect, `get` doesn't leak like crazy anymore
