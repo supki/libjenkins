@@ -56,7 +56,7 @@
 <a name="line-47"></a><span class='hs-comment'>{-# ANN module ("HLint: ignore Use join" :: String) #-}</span>
 <a name="line-48"></a>
 <a name="line-49"></a>
-<a name="line-50"></a><a name="JenkinsT"></a><span class='hs-comment'>-- | Jenkins REST API query sequence description</span>
+<a name="line-50"></a><a name="JenkinsT"></a><span class='hs-comment'>-- | The value of this type describes Jenkins REST API requests sequence</span>
 <a name="line-51"></a><a name="JenkinsT"></a><span class='hs-keyword'>newtype</span> <span class='hs-conid'>JenkinsT</span> <span class='hs-varid'>m</span> <span class='hs-varid'>a</span> <span class='hs-keyglyph'>=</span> <span class='hs-conid'>JenkinsT</span> <span class='hs-layout'>{</span> <span class='hs-varid'>unJenkinsT</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>FT</span> <span class='hs-layout'>(</span><span class='hs-conid'>JenkinsF</span> <span class='hs-varid'>m</span><span class='hs-layout'>)</span> <span class='hs-varid'>m</span> <span class='hs-varid'>a</span> <span class='hs-layout'>}</span>
 <a name="line-52"></a>  <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Functor</span><span class='hs-layout'>)</span>
 <a name="line-53"></a>
