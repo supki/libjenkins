@@ -22,7 +22,7 @@ import           System.IO (hPutStrLn, stderr) -- base
 
 -- | Program options
 data Options = Options
-  { settings :: ConnectInfo
+  { settings :: Master
   , old      :: Text
   , new      :: Text
   }
@@ -32,25 +32,25 @@ main :: IO ()
 main = do
   -- more useful help on error
   url:user:token:o:n:_ <- getArgs
-  let cinf = defaultConnectInfo
+  let cinf = defaultMaster
         & jenkinsUrl .~ url
         & jenkinsUser .~ fromString user
         & jenkinsApiToken .~ fromString token
       opts = Options cinf (fromString o) (fromString n)
   res <- rename opts
   case res of
-    Result _ -> Text.putStrLn "Done."
+    Ok _ -> Text.putStrLn "Done."
     -- disconnected for some reason
     Disconnect -> die "disconnect!"
     -- something bad happened, show it!
-    Error e -> die (show e)
+    Exception e -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
     exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Result JenkinsException ())
+rename :: Options -> IO (Result ())
 rename (Options { settings, old, new }) = runJenkins settings $ do
   -- get jobs names from jenkins "root" API
   res <- get json ("/" -?- "tree" -=- "jobs[name]")

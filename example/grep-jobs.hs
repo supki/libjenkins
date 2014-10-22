@@ -21,7 +21,7 @@ import           Text.Printf (printf)                      -- base
 main :: IO ()
 main = do
   url:user:token:regex:_ <- getArgs
-  jobs <- grep regex $ defaultConnectInfo
+  jobs <- grep regex $ defaultMaster
     & jenkinsUrl .~ url
     & jenkinsUser .~ fromString user
     & jenkinsApiToken .~ fromString token
@@ -30,11 +30,11 @@ main = do
     _  -> mapM_ Text.putStrLn jobs
 
 -- | Filter matching job names
-grep :: String -> ConnectInfo -> IO [Text]
+grep :: String -> Master -> IO [Text]
 grep regex conn = do
   jobs <- runJenkins conn $
     get json ("/" -?- "tree" -=- "jobs[name]") <&> \res -> res ^.. key "jobs".values.key "name"._String
-  filterM (match regex) (jobs ^.. _Result.folded)
+  filterM (match regex) (jobs ^.. _Ok.folded)
 
 -- | Match job name again Perl regex
 match :: String -> Text -> IO Bool

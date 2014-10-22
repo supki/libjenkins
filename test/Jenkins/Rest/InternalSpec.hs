@@ -25,29 +25,29 @@ spec = do
 
   describe "runJenkins" $ do
     it "wraps uncatched 'HttpException' exceptions from the queries in 'Error'" $
-      runJenkins defaultConnectInfo (get plain "hi")
+      runJenkins defaultMaster (get plain "hi")
      `shouldPerform`
       Status 404 ""
      `through`
-      _Error._JenkinsException._StatusCodeException._1
+      _Exception._JenkinsException._StatusCodeException._1
 
     it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $
-      runJenkins (defaultConnectInfo & jenkinsUrl .~ "foo") (get plain "hi")
+      runJenkins (defaultMaster & jenkinsUrl .~ "foo") (get plain "hi")
      `shouldPerform`
       ("foo", "Invalid URL")
      `through`
-      _Error._JenkinsException._InvalidUrlException
+      _Exception._JenkinsException._InvalidUrlException
 
     it "can catch 'HttpException' exceptions related from the queries" $
-      runJenkins defaultConnectInfo
+      runJenkins defaultMaster
         (liftJ (Or (get plain "hi" >> return 4) (return 7)))
      `shouldPerform`
       7
      `through`
-      _Result
+      _Ok
 
     it "does not catch (and wrap) 'HttpException's not from the queries" $
-      runJenkins defaultConnectInfo raiseHttp `shouldThrow` _TooManyRetries
+      runJenkins defaultMaster raiseHttp `shouldThrow` _TooManyRetries
 
     it "does not catch (and wrap) 'IOException's" $
-      runJenkins defaultConnectInfo raiseIO `shouldThrow` _IOException.errorType._NoSuchThing
+      runJenkins defaultMaster raiseIO `shouldThrow` _IOException.errorType._NoSuchThing

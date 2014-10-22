@@ -30,14 +30,14 @@ main :: IO ()
 main = do
   m:url:user:token:_ <- getArgs
   ds <- descriptions (aggregate m) $
-    defaultConnectInfo
+    defaultMaster
     & jenkinsUrl .~ url
     & jenkinsUser .~ Text.pack user
     & jenkinsApiToken .~ Text.pack token
   case ds of
-    Result ds' -> mapM_ print ds'
-    Disconnect -> die "disconnect!"
-    Error e    -> die (show e)
+    Ok ds'      -> mapM_ print ds'
+    Disconnect  -> die "disconnect!"
+    Exception e -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
@@ -50,13 +50,13 @@ main = do
 
 descriptions
   :: Aggregate Text (Maybe Text)
-  -> ConnectInfo
-  -> IO (Result JenkinsException [Maybe Text])
+  -> Master
+  -> IO (Result [Maybe Text])
 descriptions aggregate settings = runJenkins settings $ do
-  res <- get (json -?- "tree" -=- "jobs[name]")
+  res <- get json ("" -?- "tree" -=- "jobs[name]")
   aggregate describe (res ^.. key "jobs".values.key "name"._String)
 
 describe :: Text -> Jenkins (Maybe Text)
 describe name = do
-  desc <- get (job name `as` json -?- "tree" -=- "description")
+  desc <- get json (job name -?- "tree" -=- "description")
   return (desc ^? key "description"._String)

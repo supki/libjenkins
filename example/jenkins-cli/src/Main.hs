@@ -40,8 +40,8 @@ main = do
     Rename old new  -> withJobs (renameJob old new)
     Queue           -> waitJobs
   case resp of
-    Error e -> die (show e)
-    _       -> return ()
+    Exception e -> die (show e)
+    _           -> return ()
 
 die :: String -> IO a
 die message = do

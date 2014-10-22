@@ -47,7 +47,7 @@ import qualified Network.HTTP.Conduit.Lens as Lens
 {-# ANN module ("HLint: ignore Use join" :: String) #-}
 
 
--- | Jenkins REST API query sequence description
+-- | The value of this type describes Jenkins REST API requests sequence
 newtype JenkinsT m a = JenkinsT { unJenkinsT :: FT (JenkinsF m) m a }
   deriving (Functor)
 

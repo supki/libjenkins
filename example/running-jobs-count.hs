@@ -19,12 +19,12 @@ import Text.Printf (printf)              -- base
 main :: IO ()
 main = do
   url:user:token:_ <- getArgs
-  let creds = defaultConnectInfo
+  let creds = defaultMaster
         & jenkinsUrl .~ url
         & jenkinsUser .~ fromString user
         & jenkinsApiToken .~ fromString token
   jobs <- runJenkins creds getJobs
-  printf "Running jobs count: %d\n" (lengthOf (_Result.running) jobs)
+  printf "Running jobs count: %d\n" (lengthOf (_Ok.running) jobs)
 
 getJobs :: Jenkins ByteString
 getJobs = get json ("/" -?- "tree" -=- "jobs[color]")

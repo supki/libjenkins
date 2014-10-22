@@ -16,7 +16,7 @@ import           System.Directory (getAppUserDataDirectory)
 import           System.FilePath ((</>))
 
 
-newtype Config = Config { _unConfig :: ConnectInfo }
+newtype Config = Config { _unConfig :: Master }
   deriving (Show, Eq)
 
 instance FromJSON Config where
@@ -24,13 +24,13 @@ instance FromJSON Config where
     url   <- o .: "url"
     user  <- o .: "user"
     token <- o .: "api-token"
-    return (Config (defaultConnectInfo
+    return (Config (defaultMaster
       & jenkinsUrl .~ url
       & jenkinsUser .~ user
       & jenkinsApiToken .~ token))
   parseJSON _ = empty
 
-readConfig :: IO ConnectInfo
+readConfig :: IO Master
 readConfig = do
   appData <- getAppUserDataDirectory "jenkins-cli"
   either error _unConfig . eitherDecode <$> ByteString.readFile (appData </> "conf.json")

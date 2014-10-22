@@ -1,7 +1,7 @@
 0.6.0
 =====
 
-  * Renamed `postXML` to `postXml`
+  * Renamed `postXML` to `postXml`, `with` to `locally`, `ConnectInfo` to `Master`
 
   * Switched to the transformer version of the Church-encoded free monad
 

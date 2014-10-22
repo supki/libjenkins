@@ -11,34 +11,36 @@ module Jenkins.Rest
   , JenkinsT
   , Jenkins
   , Result(..)
-  , HasConnectInfo(..)
-  , ConnectInfo
-  , defaultConnectInfo
+  , HasMaster(..)
+  , Master
+  , defaultMaster
     -- ** Combinators
   , get
   , post
   , post_
-  , concurrently
   , orElse
-  , liftIO
-  , with
+  , locally
+  , disconnect
     -- *** Low-level
   , getS
     -- ** Method
   , module Jenkins.Rest.Method
-    -- ** Convenience
-  , postXml
+    -- ** Concurrency
+  , concurrently
   , traverseC
   , traverseC_
+    -- ** Convenience
+  , postXml
   , reload
   , restart
   , forceRestart
     -- * Optics
-  , _Error
+  , _Exception
   , _Disconnect
-  , _Result
+  , _Ok
   , JenkinsException(..)
     -- * Reexports
+  , liftIO
   , Request
   ) where
 
@@ -66,17 +68,18 @@ import           Jenkins.Rest.Method.Internal
 import           Network.HTTP.Conduit.Lens
 
 
--- | Query Jenkins API using 'Jenkins' description
+-- | Run a 'JenkinsT' action
 --
--- Successful result is either 'Disconnect' or @ 'Result' v @
+-- A successful 'Result' is either @'Disconnect'@ or @'Ok' v@
 --
--- If 'HttpException' was thrown by @http-conduit@, 'runJenkins' catches it
--- and wraps in 'Error'. Other exceptions are /not/ catched
+-- If a 'JenkinsException' is thrown by performing a request to Jenkins,
+-- 'runJenkins' will catch and wrap it in @'Exception'@. Other exceptions
+-- will propagate further
 runJenkins
-  :: (MonadIO m, MonadBaseControl IO m, MonadCatch m, HasConnectInfo t)
-  => t -> JenkinsT m a -> m (Result JenkinsException a)
+  :: (MonadIO m, MonadBaseControl IO m, MonadCatch m, HasMaster t)
+  => t -> JenkinsT m a -> m (Result a)
 runJenkins c jenk =
-  either Error (maybe Disconnect Result)
+  either Exception (maybe Disconnect Ok)
  `liftM`
   try (runJenkinsInternal (c^.jenkinsUrl) (c^.jenkinsUser) (c^.jenkinsApiToken) jenk)
 
@@ -84,22 +87,24 @@ runJenkins c jenk =
 type Jenkins = JenkinsT IO
 
 -- | The result of Jenkins REST API queries
-data Result e v =
-    Error e    -- ^ Exception @e@ was thrown while querying Jenkins
-  | Disconnect -- ^ The client was explicitly disconnected
-  | Result v   -- ^ Querying successfully finished the with value @v@
-    deriving (Show, Eq, Ord, Typeable, Data)
+data Result v =
+    Exception JenkinsException
+    -- ^ Exception was thrown while making requests to Jenkins
+  | Disconnect
+    -- ^ The client was explicitly disconnected by the user
+  | Ok v
+    -- ^ The result of uninterrupted execution of a 'JenkinsT' value
+    deriving (Show, Typeable)
 
 -- | A prism into Jenkins error
-_Error :: Prism (Result e a) (Result e' a) e e'
-_Error = prism Error $ \case
-  Error e    -> Right e
-  Disconnect -> Left Disconnect
-  Result a   -> Left (Result a)
-{-# INLINE _Error #-}
+_Exception :: Prism (Result a) (Result a) JenkinsException JenkinsException
+_Exception = prism' Exception $ \case
+  Exception e -> Just e
+  _           -> Nothing
+{-# INLINE _Exception #-}
 
 -- | A prism into disconnect
-_Disconnect :: Prism' (Result e a) ()
+_Disconnect :: Prism' (Result a) ()
 _Disconnect = prism' (\_ -> Disconnect) $ \case
   Disconnect -> Just ()
   _          -> Nothing
@@ -107,80 +112,59 @@ _Disconnect = prism' (\_ -> Disconnect) $ \case
 {-# ANN _Disconnect ("HLint: ignore Use const" :: String) #-}
 
 -- | A prism into result
-_Result :: Prism (Result e a) (Result e b) a b
-_Result = prism Result $ \case
-  Error e    -> Left (Error e)
-  Disconnect -> Left Disconnect
-  Result a   -> Right a
-{-# INLINE _Result #-}
+_Ok :: Prism (Result a) (Result b) a b
+_Ok = prism Ok $ \case
+  Exception e -> Left (Exception e)
+  Disconnect  -> Left Disconnect
+  Ok a        -> Right a
+{-# INLINE _Ok #-}
 
--- | Jenkins connection settings
-data ConnectInfo = ConnectInfo
-  { _jenkinsUrl      :: String -- ^ Jenkins URL, e.g. @http:\/\/example.com\/jenkins@
-  , _jenkinsUser     :: Text   -- ^ Jenkins user, e.g. @jenkins@
+-- | Jenkins master node connection settings
+class HasMaster t where
+  master :: Lens' t Master
+
+  -- | Jenkins master node URL
+  jenkinsUrl :: HasMaster t => Lens' t String
+  jenkinsUrl = master . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
+  {-# INLINE jenkinsUrl #-}
+
+  -- | Jenkins user
+  jenkinsUser :: HasMaster t => Lens' t Text
+  jenkinsUser = master . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
+  {-# INLINE jenkinsUser #-}
+
+  -- | Jenkins user's password or API token
+  jenkinsApiToken :: HasMaster t => Lens' t Text
+  jenkinsApiToken = master . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
+  {-# INLINE jenkinsApiToken #-}
+
+-- | Jenkins master node connection settings token
+data Master = Master
+  { _jenkinsUrl      :: String -- ^ Jenkins URL
+  , _jenkinsUser     :: Text   -- ^ Jenkins user
   , _jenkinsApiToken :: Text   -- ^ Jenkins user API token or password
   } deriving (Show, Eq, Typeable, Data)
 
--- | Default Jenkins connection settings
+instance HasMaster Master where
+  master = id
+  {-# INLINE master #-}
+
+-- | Default Jenkins master node connection settings token
 --
 -- @
--- defaultConnectInfo = ConnectInfo
---   { _jenkinsUrl      = \"http:\/\/example.com\/jenkins\"
---   , _jenkinsUser     = \"jenkins\"
---   , _jenkinsApiToken = \"\"
---   }
+-- 'view' 'jenkinsUrl'      defaultConnectInfo = \"http:\/\/example.com\/jenkins\"
+-- 'view' 'jenkinsUser'     defaultConnectInfo = \"jenkins\"
+-- 'view' 'jenkinsApiToken' defaultConnectInfo = \"secret\"
 -- @
-defaultConnectInfo :: ConnectInfo
-defaultConnectInfo = ConnectInfo
+defaultMaster :: Master
+defaultMaster = Master
   { _jenkinsUrl      = "http://example.com/jenkins"
   , _jenkinsUser     = "jenkins"
-  , _jenkinsApiToken = ""
+  , _jenkinsApiToken = "secret"
   }
 
--- | Convenience class aimed at elimination of long
--- chains of lenses to access jenkins connection configuration
---
--- For example, if you have a configuration record in your application:
---
--- @
--- data Config = Config
---   { ...
---   , _jenkinsConnectInfo :: ConnectInfo
---   , ...
---   }
--- @
---
--- you can make it an instance of 'HasConnectInfo':
---
--- @
--- instance HasConnectInfo Config where
---   connectInfo f x = (\p -> x { _jenkinsConnectInfo = p }) \<$\> f (_jenkinsConnectInfo x)
--- @
---
--- and then use e.g. @view jenkinsUrl config@ to get the url part of the jenkins connection
-class HasConnectInfo t where
-  connectInfo :: Lens' t ConnectInfo
 
-  -- | A lens into Jenkins URL
-  jenkinsUrl :: HasConnectInfo t => Lens' t String
-  jenkinsUrl = connectInfo . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
-  {-# INLINE jenkinsUrl #-}
-
-  -- | A lens into username to access the Jenkins instance with
-  jenkinsUser :: HasConnectInfo t => Lens' t Text
-  jenkinsUser = connectInfo . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
-  {-# INLINE jenkinsUser #-}
-
-  -- | A lens into user API token or password
-  jenkinsApiToken :: HasConnectInfo t => Lens' t Text
-  jenkinsApiToken = connectInfo . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
-  {-# INLINE jenkinsApiToken #-}
-
-instance HasConnectInfo ConnectInfo where
-  connectInfo = id
-  {-# INLINE connectInfo #-}
-
--- | @GET@ query
+-- | Perform a @GET@ request
 --
 -- While the return type is the lazy @Bytestring@, the entire response
 -- sits in the memory anyway: lazy I/O is not used at the least
@@ -190,6 +174,30 @@ get f m = do
   liftIO $ fmap Lazy.fromChunks . runResourceT $ do
     s <- ms
     s $$+- CL.consume
+
+-- | Perform a @POST@ request
+post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
+post m body = liftJ (Post m body ())
+
+-- | Perform a @POST@ request without payload
+post_ :: (forall f. Method Complete f) -> JenkinsT m ()
+post_ m = post m mempty
+
+-- | @orElse a b@ runs @a@ and only runs @b@ if @a@ has thrown a @JenkinsException@
+orElse :: JenkinsT m a -> JenkinsT m a -> JenkinsT m a
+orElse ja jb = liftJ (Or ja jb)
+
+-- | @locally f x@ modifies the base 'Request' with @f@ for the execution of @x@
+-- (think 'Control.Monad.Trans.Reader.local')
+--
+-- This is useful for setting the appropriate headers, response timeouts and the like
+locally :: (Request -> Request) -> JenkinsT m a -> JenkinsT m a
+locally f j = liftJ (With f j id)
+
+-- | Disconnect from Jenkins. No following actions will be executed.
+disconnect :: JenkinsT m a
+disconnect = liftJ Dcon
+
 
 -- |
 --
@@ -208,39 +216,32 @@ getS
 getS (Formatter f) m = liftJ (Get (f m) (\x -> x))
 {-# ANN getS ("HLint: ignore Use id" :: String) #-}
 
--- | @POST@ query (with a payload)
-post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
-post m body = liftJ (Post m body ())
 
--- | @POST@ query (without payload)
-post_ :: (forall f. Method Complete f) -> JenkinsT m ()
-post_ m = post m mempty
-
--- | Do both queries 'concurrently'
+-- | Run two actions concurrently
 concurrently :: JenkinsT m a -> JenkinsT m b -> JenkinsT m (a, b)
 concurrently ja jb = liftJ (Conc ja jb (,))
 
--- | @orElse a b@ runs @a@ and only runs @b@ if @a@ has thrown a @JenkinsException@
-orElse :: JenkinsT m a -> JenkinsT m a -> JenkinsT m a
-orElse ja jb = liftJ (Or ja jb)
-
--- | Make local changes to the 'Request'
-with :: (Request -> Request) -> JenkinsT m a -> JenkinsT m a
-with f j = liftJ $ With f j id
-
--- | @POST@ job's @config.xml@ (or any other xml, really) in @xml-conduit@ format
-postXml :: (forall f. Method Complete f) -> Document -> JenkinsT m ()
-postXml m = with (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
-
--- | Make a bunch of queries 'concurrently'
+-- | Map every list element to an action, run them concurrently and collect the results
+--
+-- @'traverseC' : 'Data.Traversable.traverse' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
 traverseC :: (a -> JenkinsT m b) -> [a] -> JenkinsT m [b]
 traverseC f = foldr go (return [])
  where
   go x xs = do (y, ys) <- concurrently (f x) xs; return (y : ys)
 
--- | Make a bunch of queries 'concurrently' ignoring their results
+-- | Map every list element to an action and run them concurrently ignoring the results
+--
+-- @'traverseC_' : 'Data.Foldable.traverse_' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
 traverseC_ :: F.Foldable f => (a -> JenkinsT m b) -> f a -> JenkinsT m ()
 traverseC_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
+
+
+-- | Perform a @POST@ request to Jenkins with the XML document
+--
+-- Sets up the correct @Content-Type@ header. Mostly useful for updating @config.xml@
+-- files for jobs, views, etc
+postXml :: (forall f. Method Complete f) -> Document -> JenkinsT m ()
+postXml m = locally (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
 
 -- | Reload jenkins configuration from disk
 --
@@ -250,19 +251,17 @@ reload = do post_ "reload"; disconnect
 
 -- | Restart jenkins safely
 --
--- Calls @/safeRestart@ and disconnects
+-- Calls @/safeRestart@ and /disconnects/
 --
 -- @/safeRestart@ allows all running jobs to complete
 restart :: JenkinsT m a
 restart = do post_ "safeRestart"; disconnect
 
--- | Force jenkins to restart without waiting for running jobs to finish
+-- | Restart jenkins
 --
--- Calls @/restart@ and disconnects
+-- Calls @/restart@ and /disconnects/
+--
+-- @/restart@ restart Jenkins immediately, without waiting for the completion of
+-- the building and/or waiting jobs
 forceRestart :: JenkinsT m a
 forceRestart = do post_ "restart"; disconnect
-
--- Disconnect from Jenkins. Any following queries won't be executed
-disconnect :: JenkinsT m a
-disconnect = liftJ Dcon
-{-# INLINE disconnect #-}
