@@ -71,6 +71,7 @@ data SFormat :: Format -> * where
   SPython :: SFormat Python
 
 
+-- | 'Formatter's know how to append the \"api/$format\" string to the method URL
 newtype Formatter g = Formatter
   { unFormatter :: (forall f. Method Complete f) -> Method Complete g
   }
