@@ -143,7 +143,7 @@ python = Formatter (\m -> m :@ SPython)
 -- | The formatter that does exactly nothing
 --
 -- >>> format plain "foo"
--- "foo/bar"
+-- "foo"
 plain :: Formatter f
 plain = Formatter (\m -> m)
 {-# ANN plain ("HLint: ignore Use id" :: String) #-}
