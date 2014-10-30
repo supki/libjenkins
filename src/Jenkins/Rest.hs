@@ -23,8 +23,6 @@ module Jenkins.Rest
   , orElse
   , locally
   , disconnect
-    -- *** Low-level
-  , getS
     -- ** Method
   , module Jenkins.Rest.Method
     -- ** Concurrency
@@ -51,17 +49,13 @@ import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch, try)
 import           Control.Monad.IO.Class (MonadIO(..))
-import           Control.Monad.Trans.Resource (MonadResource, runResourceT)
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
-import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
-import           Data.Conduit (ResumableSource, ($$+-))
-import qualified Data.Conduit.List as CL
 import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
 import           Data.Text (Text)
-import           Network.HTTP.Conduit (Request)
+import           Network.HTTP.Client (Request)
 import           Text.XML (Document, renderLBS, def)
 
 import           Jenkins.Rest.Internal
@@ -168,14 +162,10 @@ defaultMaster = Master
 
 -- | Perform a @GET@ request
 --
--- While the return type is the lazy @Bytestring@, the entire response
+-- While the return type is the /lazy/ @Bytestring@, the entire response
 -- sits in the memory anyway: lazy I/O is not used at the least
 get :: MonadIO m => Formatter f -> (forall g. Method Complete g) -> JenkinsT m Lazy.ByteString
-get f m = do
-  ms <- getS f m
-  liftIO $ fmap Lazy.fromChunks . runResourceT $ do
-    s <- ms
-    s $$+- CL.consume
+get (Formatter f) m = liftJ (Get (f m) id)
 
 -- | Perform a @POST@ request
 post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
@@ -199,24 +189,6 @@ locally f j = liftJ (With f j id)
 -- | Disconnect from Jenkins. No following actions will be executed.
 disconnect :: JenkinsT m a
 disconnect = liftJ Dcon
-
-
--- |
---
--- 'getS' prepares an action to run to make a @GET@ query to the Jenkins instance.
--- The function provides an option of tight control over sending queries and consuming responses;
--- unless you really need it, you'll be better served by the simpler 'get' function
---
--- /Note:/ if you don't close the source eventually (either explicitly with
--- 'Data.Conduit.closeResumableSource' or implicitly by reading from it)
--- it will leak a socket.
-getS
-  :: (MonadCatch n, MonadResource n)
-  => Formatter f
-  -> (forall g. Method Complete g)
-  -> JenkinsT m (n (ResumableSource n Strict.ByteString))
-getS (Formatter f) m = liftJ (Get (f m) (\x -> x))
-{-# ANN getS ("HLint: ignore Use id" :: String) #-}
 
 
 -- | Run two actions concurrently

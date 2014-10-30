@@ -51,7 +51,7 @@ import           Control.Lens
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import           Data.Word (Word64)
-import qualified Network.HTTP.Conduit as H
+import qualified Network.HTTP.Client as H
 import qualified Network.HTTP.Client.Internal as H
 import qualified Network.HTTP.Types as H
 import           Network.Socket (HostAddress)

@@ -22,7 +22,7 @@ executable jenkins-cli
     , lens                    >= 4.4
     , lens-aeson              >= 1.0.0.1
     , libjenkins              >= 0.4
-    , optparse-applicative    >= 0.10    && < 0.11
+    , optparse-applicative    >= 0.11    && < 0.12
     , process
     , text
     , xml-conduit
