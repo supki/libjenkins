@@ -37,15 +37,14 @@ library
     Jenkins.Rest.Internal
     Jenkins.Rest.Method
     Jenkins.Rest.Method.Internal
-    Network.HTTP.Conduit.Lens
+    Network.HTTP.Client.Lens
   build-depends:
       base            >= 4.6 && < 5
     , bytestring      >= 0.9
-    , conduit         >= 1.0
     , free            >= 4.1
     , exceptions      >= 0.6.1
-    , http-client-tls >= 0.2.2
     , http-client     >= 0.4
+    , http-client-tls >= 0.2.2
     , http-types      >= 0.8
     , lens            >= 4.0.1
     , lifted-async    >= 0.2
@@ -76,21 +75,20 @@ test-suite spec
       async
     , base          == 4.*
     , bytestring
-    , conduit
     , free
     , exceptions
     , hspec
     , hspec-expectations-lens
     , http-client
-    , http-conduit
+    , http-client-tls
     , http-types
     , lens
     , lifted-async
+    , lifted-base
     , monad-control
     , mtl
     , network
     , network-uri
-    , resourcet
     , text
     , transformers
     , xml-conduit

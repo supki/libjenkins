@@ -61,7 +61,7 @@ import           Text.XML (Document, renderLBS, def)
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
 import           Jenkins.Rest.Method.Internal
-import           Network.HTTP.Conduit.Lens
+import           Network.HTTP.Client.Lens
 
 
 -- | Run a 'JenkinsT' action
@@ -164,7 +164,7 @@ defaultMaster = Master
 --
 -- While the return type is the /lazy/ @Bytestring@, the entire response
 -- sits in the memory anyway: lazy I/O is not used at the least
-get :: MonadIO m => Formatter f -> (forall g. Method Complete g) -> JenkinsT m Lazy.ByteString
+get :: Formatter f -> (forall g. Method Complete g) -> JenkinsT m Lazy.ByteString
 get (Formatter f) m = liftJ (Get (f m) id)
 
 -- | Perform a @POST@ request

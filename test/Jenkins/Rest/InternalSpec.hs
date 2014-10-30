@@ -4,7 +4,7 @@ module Jenkins.Rest.InternalSpec (spec) where
 import           Control.Lens
 import           Control.Exception (throwIO)
 import           Control.Exception.Lens (throwingM, _IOException)
-import           Network.HTTP.Conduit (HttpException)
+import           Network.HTTP.Client (HttpException)
 import           Network.HTTP.Types (Status(..))
 import           Test.Hspec.Lens
 import           System.IO.Error
@@ -13,7 +13,7 @@ import           System.IO.Error.Lens (errorType, _NoSuchThing)
 import           Jenkins.Rest (Jenkins, liftIO)
 import qualified Jenkins.Rest as Jenkins
 import           Jenkins.Rest.Internal
-import           Network.HTTP.Conduit.Lens (_StatusCodeException, _InvalidUrlException, _TooManyRetries)
+import           Network.HTTP.Client.Lens (_StatusCodeException, _InvalidUrlException, _TooManyRetries)
 
 _JenkinsException :: Iso' JenkinsException HttpException
 _JenkinsException = iso (\(JenkinsHttpException e) -> e) JenkinsHttpException

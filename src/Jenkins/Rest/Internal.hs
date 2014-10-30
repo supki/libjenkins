@@ -41,7 +41,7 @@ import qualified Network.HTTP.Client.TLS as Http
 import           Network.HTTP.Types (Status(..))
 
 import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
-import qualified Network.HTTP.Conduit.Lens as Lens
+import qualified Network.HTTP.Client.Lens as Lens
 
 {-# ANN module ("HLint: ignore Use join" :: String) #-}
 

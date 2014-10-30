@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
--- | Optics for @http-conduit@ types
-module Network.HTTP.Conduit.Lens
+-- | Optics for @http-client@ types
+module Network.HTTP.Client.Lens
   ( -- * 'Request' lenses
     method
   , secure

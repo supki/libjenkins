@@ -5,10 +5,8 @@ module Jenkins.RestSpec (spec) where
 
 import           Control.Applicative
 import           Control.Monad.Trans.State (State, evalState, get, put)
-import           Control.Monad.Trans.Resource (ResourceT)
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
-import qualified Data.Conduit as C
 import           Data.Functor.Identity (Identity)
 import           Data.Monoid (mempty)
 import           Test.Hspec
@@ -39,11 +37,9 @@ spec = do
   context "GET requests" $
     it "get sends GET requests" $ do
       interpret $ do
-        let getS :: (forall f. Jenkins.Method Jenkins.Complete f) -> JenkinsT Identity (ResourceT IO (C.ResumableSource (ResourceT IO) Strict.ByteString))
-            getS = Jenkins.getS Jenkins.plain
-        getS "foo"
-        getS "bar"
-        getS "baz"
+        Jenkins.get Jenkins.plain "foo"
+        Jenkins.get Jenkins.plain "bar"
+        Jenkins.get Jenkins.plain "baz"
      `shouldBe`
       [QGet 0 "foo", QGet 1 "bar", QGet 2 "baz"]
 
@@ -87,7 +83,7 @@ interpret adt = evalState (iter go ([] <$ adt)) (Requests [0..]) where
   go :: JF Identity (State (Requests Int) [Query]) -> State (Requests Int) [Query]
   go (Get m n) = do
     r <- render QGet m
-    fmap (r :) (n (return (C.newResumableSource (C.yield mempty))))
+    fmap (r :) (n mempty)
   go (Post m body n) = do
     r <- render (\x y -> QPost x body y) m
     fmap (r :) n
