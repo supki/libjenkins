@@ -5,7 +5,7 @@ import           Control.Lens
 import           Data.Aeson
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Jenkins.Rest
+import qualified Jenkins.Rest as Jenkins
 import           Test.Hspec.Lens
 
 import           Config
@@ -20,7 +20,7 @@ spec = do
           , ", \"api-token\": \"12345678\""
           , "}"
           ]
-        config = Config (defaultMaster & jenkinsApiToken .~ "12345678")
+        config = Config (Jenkins.defaultMaster & set Jenkins.apiToken "12345678")
     decodeStrict (Text.encodeUtf8 configJson) `shouldHave` _Just.only config
 
   it "parses custom configuration" $ do
@@ -31,9 +31,9 @@ spec = do
           , "}"
           ]
         customConfig = Config
-          ( defaultMaster
-          & jenkinsUrl      .~ "https://google.com/hudson"
-          & jenkinsUser     .~ "google"
-          & jenkinsApiToken .~ "87654321"
+          ( Jenkins.defaultMaster
+          & set Jenkins.url "https://google.com/hudson"
+          & set Jenkins.user "google"
+          & set Jenkins.apiToken "87654321"
           )
     decodeStrict (Text.encodeUtf8 customConfigText) `shouldHave` _Just.only customConfig
