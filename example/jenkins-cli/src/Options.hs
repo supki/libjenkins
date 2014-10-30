@@ -91,7 +91,7 @@ subcommands = mconcat
     , Color       <$> strOption (long "color"       <> short 'c' <> help "grep job color")
     ]
 
-  jobs = many (argument (Just . pack) (help "Job name" <> metavar "JOB"))
+  jobs = many (argument (fmap pack str) (help "Job name" <> metavar "JOB"))
 
   helpInfo parser = info (helper <*> parser)
 

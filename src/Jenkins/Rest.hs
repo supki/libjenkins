@@ -5,9 +5,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 -- | Jenkins REST API interface
+--
+-- This module is intended to be imported qualified.
 module Jenkins.Rest
   ( -- * Query Jenkins
-    runJenkins
+    run
   , JenkinsT
   , Jenkins
   , Result(..)
@@ -27,8 +29,8 @@ module Jenkins.Rest
   , module Jenkins.Rest.Method
     -- ** Concurrency
   , concurrently
-  , traverseC
-  , traverseC_
+  , Jenkins.Rest.traverse
+  , Jenkins.Rest.traverse_
     -- ** Convenience
   , postXml
   , reload
@@ -75,13 +77,13 @@ import           Network.HTTP.Conduit.Lens
 -- If a 'JenkinsException' is thrown by performing a request to Jenkins,
 -- 'runJenkins' will catch and wrap it in @'Exception'@. Other exceptions
 -- will propagate further
-runJenkins
+run
   :: (MonadIO m, MonadBaseControl IO m, MonadCatch m, HasMaster t)
   => t -> JenkinsT m a -> m (Result a)
-runJenkins c jenk =
+run c jenk =
   either Exception (maybe Disconnect Ok)
  `liftM`
-  try (runJenkinsInternal (c^.jenkinsUrl) (c^.jenkinsUser) (c^.jenkinsApiToken) jenk)
+  try (runInternal (c^.url) (c^.user) (c^.apiToken) jenk)
 
 -- | A handy type synonym for the kind of 'JenkinsT' actions that's used the most
 type Jenkins = JenkinsT IO
@@ -124,19 +126,19 @@ class HasMaster t where
   master :: Lens' t Master
 
   -- | Jenkins master node URL
-  jenkinsUrl :: HasMaster t => Lens' t String
-  jenkinsUrl = master . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
-  {-# INLINE jenkinsUrl #-}
+  url :: HasMaster t => Lens' t String
+  url = master . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
+  {-# INLINE url #-}
 
   -- | Jenkins user
-  jenkinsUser :: HasMaster t => Lens' t Text
-  jenkinsUser = master . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
-  {-# INLINE jenkinsUser #-}
+  user :: HasMaster t => Lens' t Text
+  user = master . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
+  {-# INLINE user #-}
 
   -- | Jenkins user's password or API token
-  jenkinsApiToken :: HasMaster t => Lens' t Text
-  jenkinsApiToken = master . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
-  {-# INLINE jenkinsApiToken #-}
+  apiToken :: HasMaster t => Lens' t Text
+  apiToken = master . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
+  {-# INLINE apiToken #-}
 
 -- | Jenkins master node connection settings token
 data Master = Master
@@ -152,9 +154,9 @@ instance HasMaster Master where
 -- | Default Jenkins master node connection settings token
 --
 -- @
--- 'view' 'jenkinsUrl'      defaultConnectInfo = \"http:\/\/example.com\/jenkins\"
--- 'view' 'jenkinsUser'     defaultConnectInfo = \"jenkins\"
--- 'view' 'jenkinsApiToken' defaultConnectInfo = \"secret\"
+-- 'view' 'url'      defaultConnectInfo = \"http:\/\/example.com\/jenkins\"
+-- 'view' 'user'     defaultConnectInfo = \"jenkins\"
+-- 'view' 'apiToken' defaultConnectInfo = \"secret\"
 -- @
 defaultMaster :: Master
 defaultMaster = Master
@@ -223,17 +225,17 @@ concurrently ja jb = liftJ (Conc ja jb (,))
 
 -- | Map every list element to an action, run them concurrently and collect the results
 --
--- @'traverseC' : 'Data.Traversable.traverse' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
-traverseC :: (a -> JenkinsT m b) -> [a] -> JenkinsT m [b]
-traverseC f = foldr go (return [])
+-- @'traverse' : 'Data.Traversable.traverse' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
+traverse :: (a -> JenkinsT m b) -> [a] -> JenkinsT m [b]
+traverse f = foldr go (return [])
  where
   go x xs = do (y, ys) <- concurrently (f x) xs; return (y : ys)
 
 -- | Map every list element to an action and run them concurrently ignoring the results
 --
--- @'traverseC_' : 'Data.Foldable.traverse_' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
-traverseC_ :: F.Foldable f => (a -> JenkinsT m b) -> f a -> JenkinsT m ()
-traverseC_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
+-- @'traverse_' : 'Data.Foldable.traverse_' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
+traverse_ :: F.Foldable f => (a -> JenkinsT m b) -> f a -> JenkinsT m ()
+traverse_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
 
 
 -- | Perform a @POST@ request to Jenkins with the XML document

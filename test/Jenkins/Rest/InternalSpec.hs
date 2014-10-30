@@ -10,7 +10,8 @@ import           Test.Hspec.Lens
 import           System.IO.Error
 import           System.IO.Error.Lens (errorType, _NoSuchThing)
 
-import           Jenkins.Rest
+import           Jenkins.Rest (Jenkins, liftIO)
+import qualified Jenkins.Rest as Jenkins
 import           Jenkins.Rest.Internal
 import           Network.HTTP.Conduit.Lens (_StatusCodeException, _InvalidUrlException, _TooManyRetries)
 
@@ -19,35 +20,35 @@ _JenkinsException = iso (\(JenkinsHttpException e) -> e) JenkinsHttpException
 
 spec :: Spec
 spec = do
-  let raiseHttp, raiseIO :: JenkinsT IO a
+  let raiseHttp, raiseIO :: Jenkins a
       raiseHttp = liftIO (throwingM _TooManyRetries ())
       raiseIO   = liftIO (throwIO (mkIOError doesNotExistErrorType "foo" Nothing Nothing))
 
   describe "runJenkins" $ do
     it "wraps uncatched 'HttpException' exceptions from the queries in 'Error'" $
-      runJenkins defaultMaster (get plain "hi")
+      Jenkins.run Jenkins.defaultMaster (Jenkins.get Jenkins.plain "hi")
      `shouldPerform`
       Status 404 ""
      `through`
-      _Exception._JenkinsException._StatusCodeException._1
+      Jenkins._Exception._JenkinsException._StatusCodeException._1
 
     it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $
-      runJenkins (defaultMaster & jenkinsUrl .~ "foo") (get plain "hi")
+      Jenkins.run (Jenkins.defaultMaster & Jenkins.url .~ "foo") (Jenkins.get Jenkins.plain "hi")
      `shouldPerform`
       ("foo", "Invalid URL")
      `through`
-      _Exception._JenkinsException._InvalidUrlException
+      Jenkins._Exception._JenkinsException._InvalidUrlException
 
     it "can catch 'HttpException' exceptions related from the queries" $
-      runJenkins defaultMaster
-        (liftJ (Or (get plain "hi" >> return 4) (return 7)))
+      Jenkins.run Jenkins.defaultMaster
+        (liftJ (Or (Jenkins.get Jenkins.plain "hi" >> return 4) (return 7)))
      `shouldPerform`
       7
      `through`
-      _Ok
+      Jenkins._Ok
 
     it "does not catch (and wrap) 'HttpException's not from the queries" $
-      runJenkins defaultMaster raiseHttp `shouldThrow` _TooManyRetries
+      Jenkins.run Jenkins.defaultMaster raiseHttp `shouldThrow` _TooManyRetries
 
     it "does not catch (and wrap) 'IOException's" $
-      runJenkins defaultMaster raiseIO `shouldThrow` _IOException.errorType._NoSuchThing
+      Jenkins.run Jenkins.defaultMaster raiseIO `shouldThrow` _IOException.errorType._NoSuchThing

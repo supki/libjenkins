@@ -48,7 +48,7 @@ import qualified Network.HTTP.Conduit.Lens as Lens
 
 
 -- | The value of this type describes Jenkins REST API requests sequence
-newtype JenkinsT m a = JenkinsT { unJenkinsT :: FT (JenkinsF m) m a }
+newtype JenkinsT m a = JenkinsT { unJenkinsT :: FT (JF m) m a }
   deriving (Functor)
 
 instance MonadIO m => MonadIO (JenkinsT m) where
@@ -85,19 +85,18 @@ instance MonadError e m => MonadError e (JenkinsT m) where
   m `catchError` f = JenkinsT (unJenkinsT m `catchError` (unJenkinsT . f))
 
 
--- | Jenkins REST API query
-data JenkinsF m a where
+data JF m a where
   Get
     :: Method Complete f
     -> (((MonadResource m, MonadCatch m) => m (ResumableSource m Strict.ByteString)) -> a)
-    -> JenkinsF n a
-  Post :: (forall f. Method Complete f) -> ByteString -> a -> JenkinsF m a
-  Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JenkinsF m c
-  Or   :: JenkinsT m a -> JenkinsT m a -> JenkinsF m a
-  With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JenkinsF m a
-  Dcon :: JenkinsF m a
+    -> JF n a
+  Post :: (forall f. Method Complete f) -> ByteString -> a -> JF m a
+  Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
+  Or   :: JenkinsT m a -> JenkinsT m a -> JF m a
+  With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
+  Dcon :: JF m a
 
-instance Functor (JenkinsF m) where
+instance Functor (JF m) where
   fmap f (Get  m g)      = Get  m      (f . g)
   fmap f (Post m body a) = Post m body (f a)
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
@@ -106,7 +105,7 @@ instance Functor (JenkinsF m) where
   fmap _ Dcon            = Dcon
 
 -- | Lift 'JenkinsF' to 'JenkinsT'
-liftJ :: JenkinsF m a -> JenkinsT m a
+liftJ :: JF m a -> JenkinsT m a
 liftJ = JenkinsT . liftF
 
 
@@ -117,13 +116,13 @@ newtype JenkinsException
 instance Exception JenkinsException
 
 
-runJenkinsInternal
+runInternal
   :: (MonadIO m, MonadBaseControl IO m, MonadCatch m)
   => String -> Text -> Text -> JenkinsT m a -> m (Maybe a)
-runJenkinsInternal h user token jenk = do
-  url <- wrapJenkinsException (parseUrl h)
+runInternal h user token jenk = do
+  url <- wrapException (parseUrl h)
   withManager $ \m ->
-    Reader.runReaderT (runMaybeT (runInterpT (iterJenkinsIO m jenk)))
+    Reader.runReaderT (runMaybeT (runInterpT (iterIO m jenk)))
       . applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
       $ url
 
@@ -152,28 +151,28 @@ instance MonadTrans InterpT where
   lift = InterpT . lift . lift . lift
 
 -- | Interpret 'JenkinsF' AST in 'IO'
-iterJenkinsIO :: (MonadIO m, MonadBaseControl IO m, MonadCatch m) => Manager -> JenkinsT m a -> InterpT m a
-iterJenkinsIO manager = iterJenkins (interpreter manager)
+iterIO :: (MonadIO m, MonadBaseControl IO m, MonadCatch m) => Manager -> JenkinsT m a -> InterpT m a
+iterIO manager = iter (interpreter manager)
 
 -- | Tear down 'JenkinsF' AST with a 'JenkinsF'-algebra
-iterJenkins
+iter
   :: (Monad m, Monad (t m), MonadTrans t)
-  => (JenkinsF m (t m a) -> t m a) -> JenkinsT m a -> t m a
-iterJenkins go = iterTM go . unJenkinsT
+  => (JF m (t m a) -> t m a) -> JenkinsT m a -> t m a
+iter go = iterTM go . unJenkinsT
 
 -- | 'JenkinsF' AST interpreter
 interpreter
   :: forall m a. (MonadIO m, MonadBaseControl IO m, MonadCatch m)
   => Manager
-  -> JenkinsF m (InterpT m a) -> InterpT m a
+  -> JF m (InterpT m a) -> InterpT m a
 interpreter man = go where
-  go :: JenkinsF m (InterpT m a) -> InterpT m a
+  go :: JF m (InterpT m a) -> InterpT m a
   go (Get m next) = InterpT $ do
     req <- lift Reader.ask
-    runInterpT (next (wrapJenkinsException (liftM responseBody (http (prepareGet m req) man))))
+    runInterpT (next (wrapException (liftM responseBody (http (prepareGet m req) man))))
   go (Post m body next) = InterpT $ do
     req <- lift Reader.ask
-    res <- lift . lift $ wrapJenkinsException (http (preparePost m body req) man)
+    res <- lift . lift $ wrapException (http (preparePost m body req) man)
     ()  <- lift . lift $ C.closeResumableSource (responseBody res)
     runInterpT next
   go (Conc ja jb next) = do
@@ -186,7 +185,7 @@ interpreter man = go where
     next <- outoM (return res)
     next
   go (With f jenk next) = InterpT $ do
-    res <- mapMaybeT (Reader.local f) (runInterpT (iterJenkinsIO man jenk))
+    res <- mapMaybeT (Reader.local f) (runInterpT (iterIO man jenk))
     runInterpT (next res)
   go Dcon = mzero
 
@@ -199,7 +198,7 @@ intoM m f = InterpT $
   liftWith $ \run' -> liftWith $ \run'' -> liftWith $ \run''' ->
     let
       run :: JenkinsT m t -> m (StT ResourceT (StT (ReaderT Request) (StT MaybeT t)))
-      run = run''' . run'' . run' . runInterpT . iterJenkinsIO m
+      run = run''' . run'' . run' . runInterpT . iterIO m
     in
       f run
 
@@ -220,8 +219,8 @@ preparePost m body =
   statusCheck s@(Status st _) hs cookie_jar =
     if 200 <= st && st < 400 then Nothing else Just . toException $ StatusCodeException s hs cookie_jar
 
-wrapJenkinsException :: MonadCatch m => m a -> m a
-wrapJenkinsException m = m `withException` JenkinsHttpException
+wrapException :: MonadCatch m => m a -> m a
+wrapException m = m `withException` JenkinsHttpException
 
 withException :: (MonadCatch m, Exception e, Exception e') => m a -> (e -> e') -> m a
 withException m f = m `catch` \e -> throwM (f e)

@@ -1,6 +1,9 @@
 0.6.0
 =====
 
+  * Renamed `runJenkins` to `run`, `traverseC` to `traverse`, `traverseC_` to `traverse_`.
+    The `Jenkins.Rest` module is intended to be imported qualified.
+
   * Renamed `postXML` to `postXml`, `with` to `locally`, `ConnectInfo` to `Master`
 
   * Switched to the transformer version of the Church-encoded free monad

@@ -18,7 +18,8 @@ import           Control.Lens                  -- lens
 import           Data.Aeson.Lens               -- lens-aeson
 import           Data.Text (Text)              -- text
 import qualified Data.Text as Text             -- text
-import           Jenkins.Rest                  -- libjenkins
+import           Jenkins.Rest (Jenkins, (-?-), (-=-))
+import qualified Jenkins.Rest as Jenkins       -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
 import           System.IO (hPutStrLn, stderr) -- base
@@ -30,33 +31,33 @@ main :: IO ()
 main = do
   m:url:user:token:_ <- getArgs
   ds <- descriptions (aggregate m) $
-    defaultMaster
-    & jenkinsUrl .~ url
-    & jenkinsUser .~ Text.pack user
-    & jenkinsApiToken .~ Text.pack token
+    Jenkins.defaultMaster
+    & Jenkins.url .~ url
+    & Jenkins.user .~ Text.pack user
+    & Jenkins.apiToken .~ Text.pack token
   case ds of
-    Ok ds'      -> mapM_ print ds'
-    Disconnect  -> die "disconnect!"
-    Exception e -> die (show e)
+    Jenkins.Ok ds'      -> mapM_ print ds'
+    Jenkins.Disconnect  -> die "disconnect!"
+    Jenkins.Exception e -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
     exitFailure
 
   aggregate :: String -> Aggregate a b
-  aggregate "concurrent" = traverseC
+  aggregate "concurrent" = Jenkins.traverse
   aggregate "sequential" = mapM
   aggregate _ = error "Unknown mode"
 
 descriptions
   :: Aggregate Text (Maybe Text)
-  -> Master
-  -> IO (Result [Maybe Text])
-descriptions aggregate settings = runJenkins settings $ do
-  res <- get json ("" -?- "tree" -=- "jobs[name]")
+  -> Jenkins.Master
+  -> IO (Jenkins.Result [Maybe Text])
+descriptions aggregate settings = Jenkins.run settings $ do
+  res <- Jenkins.get Jenkins.json ("" -?- "tree" -=- "jobs[name]")
   aggregate describe (res ^.. key "jobs".values.key "name"._String)
 
 describe :: Text -> Jenkins (Maybe Text)
 describe name = do
-  desc <- get json (job name -?- "tree" -=- "description")
+  desc <- Jenkins.get Jenkins.json (Jenkins.job name -?- "tree" -=- "description")
   return (desc ^? key "description"._String)

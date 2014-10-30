@@ -12,7 +12,8 @@ import           Data.String (fromString)      -- base
 import           Data.Text (Text)              -- text
 import qualified Data.Text as Text             -- text
 import qualified Data.Text.IO as Text          -- text
-import           Jenkins.Rest                  -- libjenkins
+import           Jenkins.Rest (Jenkins, (-?-), (-=-), (-/-), liftIO)
+import qualified Jenkins.Rest as Jenkins       -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
 import           System.IO (hPutStrLn, stderr) -- base
@@ -22,7 +23,7 @@ import           System.IO (hPutStrLn, stderr) -- base
 
 -- | Program options
 data Options = Options
-  { settings :: Master
+  { settings :: Jenkins.Master
   , old      :: Text
   , new      :: Text
   }
@@ -32,28 +33,28 @@ main :: IO ()
 main = do
   -- more useful help on error
   url:user:token:o:n:_ <- getArgs
-  let cinf = defaultMaster
-        & jenkinsUrl .~ url
-        & jenkinsUser .~ fromString user
-        & jenkinsApiToken .~ fromString token
+  let cinf = Jenkins.defaultMaster
+        & Jenkins.url .~ url
+        & Jenkins.user .~ fromString user
+        & Jenkins.apiToken .~ fromString token
       opts = Options cinf (fromString o) (fromString n)
   res <- rename opts
   case res of
-    Ok _ -> Text.putStrLn "Done."
+    Jenkins.Ok _ -> Text.putStrLn "Done."
     -- disconnected for some reason
-    Disconnect -> die "disconnect!"
+    Jenkins.Disconnect -> die "disconnect!"
     -- something bad happened, show it!
-    Exception e -> die (show e)
+    Jenkins.Exception e -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
     exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Result ())
-rename (Options { settings, old, new }) = runJenkins settings $ do
+rename :: Options -> IO (Jenkins.Result ())
+rename (Options { settings, old, new }) = Jenkins.run settings $ do
   -- get jobs names from jenkins "root" API
-  res <- get json ("/" -?- "tree" -=- "jobs[name]")
+  res <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs".values.key "name"._String
   for_ jobs rename_job
  where
@@ -64,7 +65,7 @@ rename (Options { settings, old, new }) = runJenkins settings $ do
     yes <- prompt $ Text.unwords ["Rename", name, "to", name', "? [y/n]"]
     when yes $
       -- if user agrees then voodoo comes
-      post_ (job name -/- "doRename" -?- "newName" -=- name')
+      Jenkins.post_ (Jenkins.job name -/- "doRename" -?- "newName" -=- name')
 
   -- asks user until she enters 'y' or 'n'
   prompt message = liftIO . fix $ \loop -> do

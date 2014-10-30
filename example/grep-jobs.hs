@@ -11,7 +11,8 @@ import           Data.String (fromString)                  -- base
 import           Data.Text (Text)                          -- text
 import qualified Data.Text as Text                         -- text
 import qualified Data.Text.IO as Text                      -- text
-import           Jenkins.Rest                              -- libjenkins
+import           Jenkins.Rest ((-?-), (-=-))
+import qualified Jenkins.Rest as Jenkins                   -- libjenkins
 import           System.Environment (getArgs)              -- base
 import           System.Exit.Lens                          -- lens
 import           System.Process (readProcessWithExitCode)  -- process
@@ -21,20 +22,20 @@ import           Text.Printf (printf)                      -- base
 main :: IO ()
 main = do
   url:user:token:regex:_ <- getArgs
-  jobs <- grep regex $ defaultMaster
-    & jenkinsUrl .~ url
-    & jenkinsUser .~ fromString user
-    & jenkinsApiToken .~ fromString token
+  jobs <- grep regex $ Jenkins.defaultMaster
+    & Jenkins.url .~ url
+    & Jenkins.user .~ fromString user
+    & Jenkins.apiToken .~ fromString token
   case jobs of
     [] -> throwingM _ExitFailure 1
     _  -> mapM_ Text.putStrLn jobs
 
 -- | Filter matching job names
-grep :: String -> Master -> IO [Text]
+grep :: String -> Jenkins.Master -> IO [Text]
 grep regex conn = do
-  jobs <- runJenkins conn $
-    get json ("/" -?- "tree" -=- "jobs[name]") <&> \res -> res ^.. key "jobs".values.key "name"._String
-  filterM (match regex) (jobs ^.. _Ok.folded)
+  res <- Jenkins.run conn $
+    Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
+  filterM (match regex) (res ^.. Jenkins._Ok.key "jobs".values.key "name"._String)
 
 -- | Match job name again Perl regex
 match :: String -> Text -> IO Bool

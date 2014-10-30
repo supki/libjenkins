@@ -13,7 +13,8 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import qualified Data.Text.Lazy.IO as Lazy
-import           Jenkins.Rest
+import           Jenkins.Rest (Jenkins, liftIO, (-?-), (-=-), (-/-))
+import qualified Jenkins.Rest as Jenkins
 import           Options.Applicative (customExecParser, prefs, showHelpOnError)
 import           System.Exit (exitFailure)
 import           System.Exit.Lens
@@ -30,7 +31,7 @@ main :: IO ()
 main = do
   comm <- customExecParser (prefs showHelpOnError) options
   jenk <- readConfig
-  resp <- runJenkins jenk $ case comm of
+  resp <- Jenkins.run jenk $ case comm of
     Grep greppables -> grepJobs greppables
     Get jobs        -> withJobsOrHandle getJob stdin jobs
     Enable jobs     -> withJobsOrHandle enableJob stdin jobs
@@ -39,9 +40,7 @@ main = do
     Delete jobs     -> withJobsOrHandle deleteJob stdin jobs
     Rename old new  -> withJobs (renameJob old new)
     Queue           -> waitJobs
-  case resp of
-    Exception e -> die (show e)
-    _           -> return ()
+  forOf_ Jenkins._Exception resp (die.show)
 
 die :: String -> IO a
 die message = do
@@ -53,12 +52,12 @@ withJobs j = getJobs >>= traverse_ j
 
 getJobs :: Jenkins [Text]
 getJobs = do
-  res <- get json ("/" -?- "tree" -=- "jobs[name]")
+  res <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
   return $ res ^.. key "jobs".values.key "name"._String
 
 grepJobs :: [Greppable] -> Jenkins ()
 grepJobs greppables = do
-  json_root <- get json ("/" -?- "tree" -=- "jobs[name,description,color]")
+  json_root <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name,description,color]")
   liftIO $ do
     let jobs = json_root ^.. key "jobs".values
     filtered_jobs <- applyFilters (map grep greppables) jobs
@@ -84,7 +83,7 @@ withJobsOrHandle doThing _      xs =
 
 getJob :: Text -> Jenkins ()
 getJob name = do
-  config <- XML.parseLBS_ XML.def <$> get plain (job name -/-  "config.xml")
+  config <- XML.parseLBS_ XML.def <$> Jenkins.get Jenkins.plain (Jenkins.job name -/-  "config.xml")
   liftIO (Lazy.putStrLn (XML.renderText XML.def { XML.rsPretty = True } config))
 
 enableJob :: Text -> Jenkins ()
@@ -100,15 +99,15 @@ deleteJob :: Text -> Jenkins ()
 deleteJob = withJob "doDelete"
 
 waitJobs :: Jenkins ()
-waitJobs = get json queue >>= liftIO . printJobs
+waitJobs = Jenkins.get Jenkins.json Jenkins.queue >>= liftIO . printJobs
  where printJobs info = mapM_ Text.putStrLn (info ^.. key "items".values.key "task".key "name"._String)
 
-withJob :: (forall f. Method Complete f) -> Text -> Jenkins ()
-withJob doThing name = post_ (job name -/- doThing)
+withJob :: (forall f. Jenkins.Method Jenkins.Complete f) -> Text -> Jenkins ()
+withJob doThing name = Jenkins.post_ (Jenkins.job name -/- doThing)
 
 renameJob :: String -> String -> Text -> Jenkins ()
 renameJob old new name = substitute old new name >>=
-  traverse_ (\name' -> post_ (job name -/- "doRename" -?- "newName" -=- name'))
+  traverse_ (\name' -> Jenkins.post_ (Jenkins.job name -/- "doRename" -?- "newName" -=- name'))
 
 substitute :: String -> String -> Text -> Jenkins (Maybe Text)
 substitute old new name = do
