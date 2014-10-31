@@ -16,7 +16,6 @@ module Jenkins.Rest.Internal where
 import           Control.Applicative
 import           Control.Concurrent.Async.Lifted (concurrently)
 import           Control.Exception.Lifted (bracket)
-import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch, Exception(..), catch, throwM)
 import           Control.Monad.Free.Church (liftF)
@@ -41,7 +40,6 @@ import qualified Network.HTTP.Client.TLS as Http
 import           Network.HTTP.Types (Status(..))
 
 import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
-import qualified Network.HTTP.Client.Lens as Lens
 
 {-# ANN module ("HLint: ignore Use join" :: String) #-}
 
@@ -207,15 +205,19 @@ outoM :: Monad m => m (StT (ReaderT Request) (StT MaybeT b)) -> InterpT m b
 outoM = InterpT . restoreT . restoreT
 
 prepareGet :: Method Complete f -> Request -> Request
-prepareGet m = set Lens.method "GET" . over Lens.path (`slash` render m)
+prepareGet m r = r
+  { Http.method = "GET"
+  , Http.path   = Http.path r `slash` render m
+  }
 
 preparePost :: Method Complete f -> ByteString -> Request -> Request
-preparePost m body =
-    set Lens.checkStatus statusCheck
-  . set Lens.redirectCount 0
-  . set Lens.requestBody (Http.RequestBodyLBS body)
-  . set Lens.method "POST"
-  . over Lens.path (`slash` render m)
+preparePost m body r = r
+  { Http.checkStatus   = statusCheck
+  , Http.redirectCount = 0
+  , Http.requestBody   = Http.RequestBodyLBS body
+  , Http.method        = "POST"
+  , Http.path          = Http.path r `slash` render m
+  }
  where
   statusCheck s@(Status st _) hs cookie_jar =
     if 200 <= st && st < 400 then Nothing else Just . toException $ Http.StatusCodeException s hs cookie_jar

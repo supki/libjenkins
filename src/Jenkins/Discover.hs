@@ -10,11 +10,10 @@ module Jenkins.Discover
   ) where
 
 import           Control.Applicative (Applicative(..), (<$>))
-import           Control.Lens hiding (element)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
-import           Data.Maybe (mapMaybe)
+import           Data.Maybe (mapMaybe, listToMaybe)
 import           Data.Text (Text)
 import           Network.BSD
 import           Network.Socket
@@ -82,7 +81,7 @@ parse :: ByteString -> Maybe Discover
 parse bs = either (const Nothing) Just (parseLBS def (BL.fromStrict bs)) >>= \doc ->
   let
     cursor = fromDocument doc
-    tag t  = preview _head (cursor $/ element t &// content)
+    tag t  = listToMaybe (cursor $/ element t &// content)
   in Discover
     <$> tag "version"
     <*> tag "url"

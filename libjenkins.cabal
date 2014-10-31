@@ -38,6 +38,7 @@ library
     Jenkins.Rest.Method
     Jenkins.Rest.Method.Internal
     Network.HTTP.Client.Lens
+    Network.HTTP.Client.Lens.Internal
   build-depends:
       base            >= 4.6 && < 5
     , bytestring      >= 0.9
@@ -46,10 +47,10 @@ library
     , http-client     >= 0.4
     , http-client-tls >= 0.2.2
     , http-types      >= 0.8
-    , lens            >= 4.0.1
     , lifted-async    >= 0.2
     , lifted-base     >= 0.2.3
     , monad-control   >= 0.3
+    , profunctors     >= 4.2
     , mtl             >= 2.1
     , network         >= 2.6
     , network-uri     >= 2.6
@@ -89,6 +90,7 @@ test-suite spec
     , mtl
     , network
     , network-uri
+    , profunctors
     , text
     , transformers
     , xml-conduit

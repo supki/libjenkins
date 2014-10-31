@@ -45,7 +45,6 @@ module Jenkins.Rest
   ) where
 
 import           Control.Applicative ((<$))
-import           Control.Lens
 import           Control.Monad
 import           Control.Monad.Catch (MonadCatch, try)
 import           Control.Monad.IO.Class (MonadIO(..))
@@ -55,13 +54,13 @@ import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
 import           Data.Text (Text)
-import           Network.HTTP.Client (Request)
+import           Network.HTTP.Client (Request, requestHeaders)
 import           Text.XML (Document, renderLBS, def)
 
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
 import           Jenkins.Rest.Method.Internal
-import           Network.HTTP.Client.Lens
+import           Network.HTTP.Client.Lens.Internal
 
 
 -- | Run a 'JenkinsT' action
@@ -121,24 +120,24 @@ class HasMaster t where
 
   -- | Jenkins master node URL
   url :: HasMaster t => Lens' t String
-  url = master . \f x ->  f (_jenkinsUrl x) <&> \p -> x { _jenkinsUrl = p }
+  url = master . \f x -> f (_url x) <&> \p -> x { _url = p }
   {-# INLINE url #-}
 
   -- | Jenkins user
   user :: HasMaster t => Lens' t Text
-  user = master . \f x -> f (_jenkinsUser x) <&> \p -> x { _jenkinsUser = p }
+  user = master . \f x -> f (_user x) <&> \p -> x { _user = p }
   {-# INLINE user #-}
 
   -- | Jenkins user's password or API token
   apiToken :: HasMaster t => Lens' t Text
-  apiToken = master . \f x -> f (_jenkinsApiToken x) <&> \p -> x { _jenkinsApiToken = p }
+  apiToken = master . \f x -> f (_apiToken x) <&> \p -> x { _apiToken = p }
   {-# INLINE apiToken #-}
 
 -- | Jenkins master node connection settings token
 data Master = Master
-  { _jenkinsUrl      :: String -- ^ Jenkins URL
-  , _jenkinsUser     :: Text   -- ^ Jenkins user
-  , _jenkinsApiToken :: Text   -- ^ Jenkins user API token or password
+  { _url      :: String -- ^ Jenkins URL
+  , _user     :: Text   -- ^ Jenkins user
+  , _apiToken :: Text   -- ^ Jenkins user API token or password
   } deriving (Show, Eq, Typeable, Data)
 
 instance HasMaster Master where
@@ -154,9 +153,9 @@ instance HasMaster Master where
 -- @
 defaultMaster :: Master
 defaultMaster = Master
-  { _jenkinsUrl      = "http://example.com/jenkins"
-  , _jenkinsUser     = "jenkins"
-  , _jenkinsApiToken = "secret"
+  { _url      = "http://example.com/jenkins"
+  , _user     = "jenkins"
+  , _apiToken = "secret"
   }
 
 
@@ -215,7 +214,9 @@ traverse_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
 -- Sets up the correct @Content-Type@ header. Mostly useful for updating @config.xml@
 -- files for jobs, views, etc
 postXml :: (forall f. Method Complete f) -> Document -> JenkinsT m ()
-postXml m = locally (requestHeaders <>~ [("Content-Type", "text/xml")]) . post m . renderLBS def
+postXml m = locally (\r -> r { requestHeaders = xmlHeader : requestHeaders r }) . post m . renderLBS def
+ where
+  xmlHeader = ("Content-Type", "text/xml")
 
 -- | Reload jenkins configuration from disk
 --
