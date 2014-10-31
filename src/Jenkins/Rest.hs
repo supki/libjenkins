@@ -45,8 +45,8 @@ module Jenkins.Rest
   ) where
 
 import           Control.Applicative ((<$))
+import           Control.Exception.Lifted (try)
 import           Control.Monad
-import           Control.Monad.Catch (MonadCatch, try)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import qualified Data.ByteString.Lazy as Lazy
@@ -71,7 +71,7 @@ import           Network.HTTP.Client.Lens.Internal
 -- 'runJenkins' will catch and wrap it in @'Exception'@. Other exceptions
 -- will propagate further
 run
-  :: (MonadIO m, MonadBaseControl IO m, MonadCatch m, HasMaster t)
+  :: (MonadIO m, MonadBaseControl IO m, HasMaster t)
   => t -> JenkinsT m a -> m (Result a)
 run c jenk =
   either Exception (maybe Disconnect Ok)

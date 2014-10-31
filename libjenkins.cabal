@@ -43,7 +43,6 @@ library
       base            >= 4.6 && < 5
     , bytestring      >= 0.9
     , free            >= 4.1
-    , exceptions      >= 0.6.1
     , http-client     >= 0.4
     , http-client-tls >= 0.2.2
     , http-types      >= 0.8
@@ -77,7 +76,6 @@ test-suite spec
     , base          == 4.*
     , bytestring
     , free
-    , exceptions
     , hspec
     , hspec-expectations-lens
     , http-client

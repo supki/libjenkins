@@ -15,9 +15,9 @@ module Jenkins.Rest.Internal where
 
 import           Control.Applicative
 import           Control.Concurrent.Async.Lifted (concurrently)
-import           Control.Exception.Lifted (bracket)
+import           Control.Exception (Exception(..))
+import           Control.Exception.Lifted (bracket, catch, throwIO)
 import           Control.Monad
-import           Control.Monad.Catch (MonadCatch, Exception(..), catch, throwM)
 import           Control.Monad.Free.Church (liftF)
 import           Control.Monad.Error (MonadError(..))
 import           Control.Monad.IO.Class (MonadIO(..))
@@ -111,10 +111,10 @@ instance Exception JenkinsException
 
 
 runInternal
-  :: (MonadIO m, MonadBaseControl IO m, MonadCatch m)
+  :: (MonadIO m, MonadBaseControl IO m)
   => String -> Text -> Text -> JenkinsT m a -> m (Maybe a)
 runInternal h user token jenk = do
-  url <- wrapException (Http.parseUrl h)
+  url <- wrapException (liftIO (Http.parseUrl h))
   bracket (newManager Http.tlsManagerSettings) closeManager $ \m ->
     Reader.runReaderT (runMaybeT (runInterpT (iterInterpT m jenk)))
       . Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
@@ -150,7 +150,7 @@ instance MonadTrans InterpT where
   lift = InterpT . lift . lift
 
 -- | Interpret the 'JF' AST in 'InterpT'
-iterInterpT :: (MonadIO m, MonadBaseControl IO m, MonadCatch m) => Http.Manager -> JenkinsT m a -> InterpT m a
+iterInterpT :: (MonadIO m, MonadBaseControl IO m) => Http.Manager -> JenkinsT m a -> InterpT m a
 iterInterpT manager = iter (interpreter manager)
 
 -- | Tear down the 'JF' AST with a 'JF'-algebra
@@ -161,7 +161,7 @@ iter go = iterTM go . unJenkinsT
 
 -- | 'JF' AST interpreter
 interpreter
-  :: forall m a. (MonadIO m, MonadBaseControl IO m, MonadCatch m)
+  :: forall m a. (MonadIO m, MonadBaseControl IO m)
   => Http.Manager
   -> JF m (InterpT m a) -> InterpT m a
 interpreter man = go where
@@ -189,7 +189,7 @@ interpreter man = go where
   go Dcon = mzero
 
 intoM
-  :: forall m a. (MonadIO m, MonadBaseControl IO m, MonadCatch m)
+  :: forall m a. (MonadIO m, MonadBaseControl IO m)
   => Http.Manager
   -> ((forall b. JenkinsT m b -> m (StT (ReaderT Request) (StT MaybeT b))) -> m a)
   -> InterpT m a
@@ -222,5 +222,5 @@ preparePost m body r = r
   statusCheck s@(Status st _) hs cookie_jar =
     if 200 <= st && st < 400 then Nothing else Just . toException $ Http.StatusCodeException s hs cookie_jar
 
-wrapException :: MonadCatch m => m a -> m a
-wrapException m = m `catch` (throwM .  JenkinsHttpException)
+wrapException :: MonadBaseControl IO m => m a -> m a
+wrapException m = m `catch` (throwIO .  JenkinsHttpException)
