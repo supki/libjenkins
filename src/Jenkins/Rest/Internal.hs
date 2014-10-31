@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -14,6 +15,9 @@
 module Jenkins.Rest.Internal where
 
 import           Control.Applicative
+#if ! MIN_VERSION_free(5,0,0)
+import           Control.Applicative.Backwards (Backwards(..))
+#endif
 import           Control.Concurrent.Async.Lifted (concurrently)
 import           Control.Exception (Exception(..))
 import           Control.Exception.Lifted (bracket, catch, throwIO)
@@ -56,7 +60,12 @@ instance MonadTrans JenkinsT where
 
 instance Applicative (JenkinsT m) where
   pure = JenkinsT . pure
+#if MIN_VERSION_free(5,0,0)
   JenkinsT f <*> JenkinsT x = JenkinsT (f <*> x)
+#else
+  -- https://github.com/ekmett/free/pull/80
+  JenkinsT f <*> JenkinsT x = JenkinsT (forwards (Backwards f <*> Backwards x))
+#endif
 
 instance Monad (JenkinsT m) where
   return = JenkinsT . return

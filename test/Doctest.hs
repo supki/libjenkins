@@ -9,7 +9,7 @@ import Test.DocTest (doctest)
 
 
 main :: IO ()
-main = sources "src" >>= doctest
+main = sources "src" >>= doctest . (["-optP-include", "-optPdist/build/autogen/cabal_macros.h"] ++)
 
 sources :: FilePath -> IO [FilePath]
 sources root = do
