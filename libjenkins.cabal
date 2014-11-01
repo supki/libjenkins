@@ -29,16 +29,8 @@ source-repository this
   tag:      0.6.0
 
 library
-  default-language:  Haskell2010
-  hs-source-dirs:    src
-  exposed-modules:
-    Jenkins.Discover
-    Jenkins.Rest
-    Jenkins.Rest.Internal
-    Jenkins.Rest.Method
-    Jenkins.Rest.Method.Internal
-    Network.HTTP.Client.Lens
-    Network.HTTP.Client.Lens.Internal
+  default-language:
+    Haskell2010
   build-depends:
       base            >= 4.6 && < 5
     , attoparsec      >= 0.12
@@ -57,21 +49,37 @@ library
     , network-uri     >= 2.6
     , text            >= 0.11
     , transformers
+  hs-source-dirs:
+    src
+  exposed-modules:
+    Jenkins.Discover
+    Jenkins.Rest
+    Jenkins.Rest.Internal
+    Jenkins.Rest.Method
+    Jenkins.Rest.Method.Internal
+    Network.HTTP.Client.Lens
+    Network.HTTP.Client.Lens.Internal
 
 test-suite doctest
-  default-language:  Haskell2010
-  type:              exitcode-stdio-1.0
+  default-language:
+    Haskell2010
+  type:
+    exitcode-stdio-1.0
   build-depends:
       base          == 4.*
     , directory
     , doctest
     , filepath
-  hs-source-dirs:    test
-  main-is:           Doctest.hs
+  hs-source-dirs:
+    test
+  main-is:
+    Doctest.hs
 
 test-suite spec
-  default-language:  Haskell2010
-  type:              exitcode-stdio-1.0
+  default-language:
+    Haskell2010
+  type:
+    exitcode-stdio-1.0
   build-depends:
       async
     , attoparsec
@@ -98,9 +106,12 @@ test-suite spec
   hs-source-dirs:
     src
     test
-  main-is:           Spec.hs
+  main-is:
+    Spec.hs
   other-modules:
+    Jenkins.DiscoverSpec
     Jenkins.RestSpec
     Jenkins.Rest.InternalSpec
+    Jenkins.Rest.Method.InternalSpec
   cpp-options:
     -DTEST
