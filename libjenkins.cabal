@@ -41,7 +41,9 @@ library
     Network.HTTP.Client.Lens.Internal
   build-depends:
       base            >= 4.6 && < 5
+    , attoparsec      >= 0.12
     , bytestring      >= 0.9
+    , containers
     , free            >= 4.1
     , http-client     >= 0.4
     , http-client-tls >= 0.2.2
@@ -54,8 +56,7 @@ library
     , network         >= 2.6
     , network-uri     >= 2.6
     , text            >= 0.11
-    , transformers    >= 0.3
-    , xml-conduit     >= 1.1
+    , transformers
 
 test-suite doctest
   default-language:  Haskell2010
@@ -73,8 +74,10 @@ test-suite spec
   type:              exitcode-stdio-1.0
   build-depends:
       async
+    , attoparsec
     , base          == 4.*
     , bytestring
+    , containers
     , free
     , hspec
     , hspec-expectations-lens

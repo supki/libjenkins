@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Jenkins.DiscoverSpec (spec) where
 
+import Data.ByteString (ByteString)
 import Test.Hspec
 
 import Jenkins.Discover
@@ -9,26 +10,57 @@ import Jenkins.Discover
 spec :: Spec
 spec =
   describe "parse" $ do
-    it "parses Jenkins xml response with the server-id tag" $
-      let
-        response = "<hudson><version>foo</version><url>bar</url><server-id>baz</server-id></hudson>"
-      in
-        parse response `shouldBe` Just (Discover "foo" "bar" (Just "baz"))
+    it "parses a real Jenkins response" $
+      parseXml fullResponse
+      `shouldBe`
+      Just Discover
+        { version  = "1.587"
+        , url      = "https://example.com/jenkins/"
+        , serverId = Just "1abcfaefb01da8b19ede7c35ced24f0f"
+        , port     = Just "51667"
+        }
 
-    it "parses Jenkins xml response without the server-id tag" $
-      let
-        response = "<hudson><version>foo</version><url>bar</url></hudson>"
-      in
-        parse response `shouldBe` Just (Discover "foo" "bar" Nothing)
+    it "parses a Jenkins response without a server id" $
+        parseXml noServerId
+       `shouldBe`
+        Just Discover
+          { version  = "1.587"
+          , url      = "https://example.com/jenkins/"
+          , serverId = Nothing
+          , port     = Just "51667"
+          }
 
-    it "does not parse Jenkins xml response without the version tag" $
-      let
-        response = "<hudson><url>bar</url></hudson>"
-      in
-        parse response `shouldBe` Nothing
+    it "parses a Jenkins response without a slave port" $
+        parseXml noSlavePort
+       `shouldBe`
+        Just Discover
+          { version  = "1.587"
+          , url      = "https://example.com/jenkins/"
+          , serverId = Just "1abcfaefb01da8b19ede7c35ced24f0f"
+          , port     = Nothing
+          }
 
-    it "does not parse Jenkins xml response without the url tag" $
-      let
-        response = "<hudson><version>foo</version></hudson>"
-      in
-        parse response `shouldBe` Nothing
+fullResponse :: ByteString
+fullResponse =
+  "<hudson>\
+  \<version>1.587</version>\
+  \<url>https://example.com/jenkins/</url>\
+  \<server-id>1abcfaefb01da8b19ede7c35ced24f0f</server-id>\
+  \<slave-port>51667</slave-port>\
+  \</hudson>"
+
+noServerId :: ByteString
+noServerId =
+  "<hudson>\
+  \<version>1.587</version>\
+  \<url>https://example.com/jenkins/</url>\
+  \<slave-port>51667</slave-port>\
+  \</hudson>"
+
+noSlavePort :: ByteString
+noSlavePort =
+  "<hudson>\
+  \<version>1.587</version>\
+  \<url>https://example.com/jenkins/</url>\
+  \<server-id>1abcfaefb01da8b19ede7c35ced24f0f</server-id>\
+  \</hudson>"

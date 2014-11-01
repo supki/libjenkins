@@ -55,7 +55,6 @@ import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
 import           Data.Text (Text)
 import           Network.HTTP.Client (Request, requestHeaders)
-import           Text.XML (Document, renderLBS, def)
 
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
@@ -213,8 +212,8 @@ traverse_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
 --
 -- Sets up the correct @Content-Type@ header. Mostly useful for updating @config.xml@
 -- files for jobs, views, etc
-postXml :: (forall f. Method Complete f) -> Document -> JenkinsT m ()
-postXml m = locally (\r -> r { requestHeaders = xmlHeader : requestHeaders r }) . post m . renderLBS def
+postXml :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
+postXml m = locally (\r -> r { requestHeaders = xmlHeader : requestHeaders r }) . post m
  where
   xmlHeader = ("Content-Type", "text/xml")
 

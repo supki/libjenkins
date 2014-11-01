@@ -5,31 +5,35 @@ module Jenkins.Discover
   ( Discover(..)
   , discover
 #ifdef TEST
-  , parse
+  , parseXml
 #endif
   ) where
 
-import           Control.Applicative (Applicative(..), (<$>))
+import           Control.Applicative
+import           Control.Monad
+import           Data.Attoparsec.Text
 import           Data.ByteString (ByteString)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as BL
-import           Data.Maybe (mapMaybe, listToMaybe)
+import qualified Data.ByteString as ByteString
+import           Data.Map (Map)
+import qualified Data.Map as Map
+import           Data.Maybe (mapMaybe)
+import           Data.Monoid ((<>))
 import           Data.Text (Text)
+import qualified Data.Text.Encoding as Text
 import           Network.BSD
 import           Network.Socket
-import           Network.Socket.ByteString as B
+import           Network.Socket.ByteString as ByteString
 import           System.Timeout (timeout)
-import           Text.XML
-import           Text.XML.Cursor
 
 {-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
 
 
 -- | Jenkins information
 data Discover = Discover
-  { version   :: Text
-  , url       :: Text
-  , server_id :: Maybe Text
+  { version  :: Text
+  , url      :: Text
+  , port     :: Maybe Text
+  , serverId :: Maybe Text
   } deriving (Show, Eq)
 
 
@@ -39,12 +43,12 @@ discover
   -> IO [Discover]
 discover t = do
   (b, addr) <- broadcastSocket
-  B.sendTo b (B.pack [0, 0, 0, 0]) addr -- does not matter what to send
+  ByteString.sendTo b (ByteString.pack [0, 0, 0, 0]) addr -- does not matter what to send
 
   msgs <- while (timeout t (readAnswer b))
 
   close b
-  return (mapMaybe parse msgs)
+  return (mapMaybe parseXml msgs)
  where
   while :: IO (Maybe a) -> IO [a]
   while io = go where
@@ -58,31 +62,37 @@ broadcastSocket :: IO (Socket, SockAddr)
 broadcastSocket = do
   s <- getProtocolNumber "udp" >>= socket AF_INET Datagram
   setSocketOption s Broadcast 1
-  return (s, SockAddrInet port (-1) {- 255.255.255.255 -})
+  return (s, SockAddrInet p (-1) {- 255.255.255.255 -})
  where
-  port = 33848
+  p = 33848
 
 readAnswer :: Socket -> IO ByteString
-readAnswer s = fst <$> B.recvFrom s 4096
+readAnswer s = fst <$> ByteString.recvFrom s 4096
 
 
 -- | Parse Jenkins discovery response XML
---
--- The \"Scheme\" is as follows:
---
--- @
--- <hudson>
---   <version>...</version>
---   <url>...</url>
---   <server-id>...</server-id>
--- </hudson>
--- @
-parse :: ByteString -> Maybe Discover
-parse bs = either (const Nothing) Just (parseLBS def (BL.fromStrict bs)) >>= \doc ->
-  let
-    cursor = fromDocument doc
-    tag t  = listToMaybe (cursor $/ element t &// content)
-  in Discover
-    <$> tag "version"
-    <*> tag "url"
-    <*> pure (tag "server-id")
+parseXml :: ByteString -> Maybe Discover
+parseXml = fromMap <=< either (\_ -> Nothing) Just . parseOnly (parser <* endOfInput) . Text.decodeUtf8
+
+fromMap :: Map Text Text -> Maybe Discover
+fromMap m = do
+  v <- Map.lookup "version" m
+  u <- Map.lookup "url" m
+  i <- return (Map.lookup "server-id" m)
+  p <- return (Map.lookup "slave-port" m)
+  return Discover { version = v, url = u, serverId = i, port = p }
+
+parser :: Parser (Map Text Text)
+parser = string "<hudson>" *> tags <* string "</hudson>"
+
+tags :: Parser (Map Text Text)
+tags = Map.fromList <$> many tag
+
+tag :: Parser (Text, Text)
+tag = do
+  _ <- char '<'
+  k <- takeWhile1 (/= '>')
+  _ <- char '>'
+  v <- takeWhile1 (/= '<')
+  _ <- string ("</" <> k <> ">")
+  return (k, v)

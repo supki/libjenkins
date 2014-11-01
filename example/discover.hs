@@ -4,8 +4,8 @@ module Main (main) where
 
 import           Data.Monoid ((<>), mempty) -- base
 import           Data.Text (Text)           -- text
-import qualified Data.Text as T             -- text
-import qualified Data.Text.IO as T          -- text
+import qualified Data.Text as Text          -- text
+import qualified Data.Text.IO as Text       -- text
 import           Jenkins.Discover           -- libjenkins
 import           System.Exit (exitFailure)  -- base
 
@@ -18,12 +18,12 @@ main = do
     -- no Jenkins responded
     [] -> exitFailure
     -- pretty print responses
-    _  -> mapM_ (T.putStrLn . pretty) discoveries
+    _  -> mapM_ (Text.putStrLn . pretty) discoveries
 
 -- | Pretty print Jenkins discovery responses
 pretty :: Discover -> Text
-pretty x = T.unwords $
-  ["Jenkins", version x] ++ maybe mempty (return . between "(" ")") (server_id x) ++ ["at", url x]
+pretty x = Text.unwords $
+  "Jenkins" : version x : maybe mempty (return . between "(" ")") (serverId x) ++ ["at", url x]
  where
   between l r t = l <> t <> r
 
