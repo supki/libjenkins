@@ -112,6 +112,8 @@ liftJ :: JF m a -> JenkinsT m a
 liftJ = JenkinsT . liftF
 
 
+-- | The kind of exceptions that can be thrown by performing requests
+-- to the Jenkins REST API
 newtype JenkinsException
   = JenkinsHttpException HttpException
     deriving (Show, Typeable)

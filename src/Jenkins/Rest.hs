@@ -146,9 +146,9 @@ instance HasMaster Master where
 -- | Default Jenkins master node connection settings token
 --
 -- @
--- 'view' 'url'      defaultConnectInfo = \"http:\/\/example.com\/jenkins\"
--- 'view' 'user'     defaultConnectInfo = \"jenkins\"
--- 'view' 'apiToken' defaultConnectInfo = \"secret\"
+-- view 'url'      defaultConnectInfo = \"http:\/\/example.com\/jenkins\"
+-- view 'user'     defaultConnectInfo = \"jenkins\"
+-- view 'apiToken' defaultConnectInfo = \"secret\"
 -- @
 defaultMaster :: Master
 defaultMaster = Master
@@ -169,7 +169,7 @@ get (Formatter f) m = liftJ (Get (f m) id)
 post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
 post m body = liftJ (Post m body ())
 
--- | Perform a @POST@ request without payload
+-- | Perform a @POST@ request without a payload
 post_ :: (forall f. Method Complete f) -> JenkinsT m ()
 post_ m = post m mempty
 
@@ -184,7 +184,7 @@ orElse ja jb = liftJ (Or ja jb)
 locally :: (Request -> Request) -> JenkinsT m a -> JenkinsT m a
 locally f j = liftJ (With f j id)
 
--- | Disconnect from Jenkins. No following actions will be executed.
+-- | Disconnect from Jenkins. The following actions are ignored.
 disconnect :: JenkinsT m a
 disconnect = liftJ Dcon
 
@@ -219,13 +219,13 @@ postXml m = locally (\r -> r { requestHeaders = xmlHeader : requestHeaders r }) 
 
 -- | Reload jenkins configuration from disk
 --
--- Calls @/reload@ and disconnects
+-- Performs @/reload@ and disconnects
 reload :: JenkinsT m a
 reload = do post_ "reload"; disconnect
 
 -- | Restart jenkins safely
 --
--- Calls @/safeRestart@ and /disconnects/
+-- Performs @/safeRestart@ and /disconnects/
 --
 -- @/safeRestart@ allows all running jobs to complete
 restart :: JenkinsT m a
@@ -233,7 +233,7 @@ restart = do post_ "safeRestart"; disconnect
 
 -- | Restart jenkins
 --
--- Calls @/restart@ and /disconnects/
+-- Performs @/restart@ and /disconnects/
 --
 -- @/restart@ restart Jenkins immediately, without waiting for the completion of
 -- the building and/or waiting jobs
