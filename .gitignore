@@ -4,3 +4,5 @@ cabal.sandbox.config
 .cabal-sandbox
 README.html
 Gemfile.lock
+result
+env.nix

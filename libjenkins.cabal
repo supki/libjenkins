@@ -37,7 +37,7 @@ library
     , bytestring      >= 0.9
     , containers
     , free            >= 4.1
-    , http-client     >= 0.4
+    , http-client     >= 0.3.8
     , http-client-tls >= 0.2.2
     , http-types      >= 0.8
     , lifted-async    >= 0.2
