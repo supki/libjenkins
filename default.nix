@@ -1,19 +1,15 @@
-{ cabal, async, attoparsec, doctest, filepath, free, hspec
-, hspecExpectationsLens, httpClient, httpClientTls, httpTypes, lens
-, liftedAsync, liftedBase, monadControl, mtl, network, networkUri
-, profunctors, text, transformers, xmlConduit
-}:
+{ haskellPackages ? (import <nixpkgs> {}).haskellPackages }:
 
-cabal.mkDerivation (self: rec {
+haskellPackages.cabal.mkDerivation (self: rec {
   pname = "libjenkins";
   version = "0.6.0";
   src = ./.;
-  buildDepends = [
+  buildDepends = with haskellPackages; [
     attoparsec free httpClient httpClientTls httpTypes liftedAsync
     liftedBase monadControl mtl network networkUri profunctors text
     transformers
   ];
-  testDepends = [
+  testDepends = with haskellPackages; buildDepends ++ [
     async doctest filepath hspec hspecExpectationsLens lens xmlConduit
   ];
   meta = {
