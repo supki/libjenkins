@@ -41,7 +41,7 @@ spec = do
 
     it "can catch 'HttpException' exceptions related from the queries" $
       Jenkins.run Jenkins.defaultMaster
-        (liftJ (Or (Jenkins.get Jenkins.plain "hi" >> return 4) (return 7)))
+        (liftJ (Or (Jenkins.get Jenkins.plain "hi" >> return 4) (\_ -> return 7)))
      `shouldPerform`
       7
      `through`

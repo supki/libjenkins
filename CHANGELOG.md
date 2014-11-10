@@ -1,6 +1,8 @@
 0.6.0
 =====
 
+  * Made `orElse` more powerful. The old version is available as `orElse_`
+
   * Renamed a bunch of things.  The `Jenkins.Rest` module is intended to be imported qualified.
 
   * Switched to the transformer version of the Church-encoded free monad

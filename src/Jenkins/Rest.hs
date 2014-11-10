@@ -21,6 +21,7 @@ module Jenkins.Rest
   , post
   , post_
   , orElse
+  , orElse_
   , locally
   , disconnect
     -- ** Method
@@ -173,9 +174,19 @@ post m body = liftJ (Post m body ())
 post_ :: (forall f. Method Complete f) -> JenkinsT m ()
 post_ m = post m mempty
 
--- | @orElse a b@ runs @a@ and only runs @b@ if @a@ has thrown a @JenkinsException@
-orElse :: JenkinsT m a -> JenkinsT m a -> JenkinsT m a
-orElse ja jb = liftJ (Or ja jb)
+-- | A simple exception handler. If an exception is raised while the action is
+-- executed the handler is executed with it as an argument
+orElse :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JenkinsT m a
+orElse a b = liftJ (Or a b)
+
+-- | A simpler exception handler
+--
+-- @
+-- orElse_ a b = 'orElse' a (\_ -> b)
+-- @
+orElse_ :: JenkinsT m a -> JenkinsT m a -> JenkinsT m a
+orElse_ a b = orElse a (\_ -> b)
+{-# ANN orElse_ ("HLint: ignore Use const" :: String) #-}
 
 -- | @locally f x@ modifies the base 'Request' with @f@ for the execution of @x@
 -- (think 'Control.Monad.Trans.Reader.local')

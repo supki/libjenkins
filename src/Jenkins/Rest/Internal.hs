@@ -95,7 +95,7 @@ data JF m a where
   Get :: Method Complete f -> (ByteString -> a) -> JF n a
   Post :: (forall f. Method Complete f) -> ByteString -> a -> JF m a
   Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
-  Or   :: JenkinsT m a -> JenkinsT m a -> JF m a
+  Or   :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
   With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
   Dcon :: JF m a
 
@@ -103,7 +103,7 @@ instance Functor (JF m) where
   fmap f (Get  m g)      = Get  m      (f . g)
   fmap f (Post m body a) = Post m body (f a)
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
-  fmap f (Or a b)        = Or (fmap f a) (fmap f b)
+  fmap f (Or a b)        = Or (fmap f a) (fmap f . b)
   fmap f (With h j g)    = With h j    (f . g)
   fmap _ Dcon            = Dcon
 
@@ -191,7 +191,7 @@ interpreter man = go where
     d      <- outoM (return b)
     next c d
   go (Or ja jb) = do
-    res  <- intoM man $ \run -> run ja `catch` \(JenkinsHttpException _) -> run jb
+    res  <- intoM man $ \run -> run ja `catch` (run . jb)
     next <- outoM (return res)
     next
   go (With f jenk next) = InterpT $ do
