@@ -3,6 +3,7 @@
 -- | Rename jobs matching supplied pattern
 module Main (main) where
 
+import           Control.Applicative           -- base
 import           Control.Lens                  -- lens
 import           Control.Monad (when)          -- base
 import           Data.Aeson.Lens               -- lens-aeson
@@ -65,7 +66,7 @@ rename (Options { settings, old, new }) = Jenkins.run settings $ do
     yes <- prompt $ Text.unwords ["Rename", name, "to", name', "? [y/n]"]
     when yes $
       -- if user agrees then voodoo comes
-      Jenkins.post_ (Jenkins.job name -/- "doRename" -?- "newName" -=- name')
+      () <$ Jenkins.post_ (Jenkins.job name -/- "doRename" -?- "newName" -=- name')
 
   -- asks user until she enters 'y' or 'n'
   prompt message = liftIO . fix $ \loop -> do

@@ -103,11 +103,11 @@ waitJobs = Jenkins.get Jenkins.json Jenkins.queue >>= liftIO . printJobs
  where printJobs info = mapM_ Text.putStrLn (info ^.. key "items".values.key "task".key "name"._String)
 
 withJob :: (forall f. Jenkins.Method Jenkins.Complete f) -> Text -> Jenkins ()
-withJob doThing name = Jenkins.post_ (Jenkins.job name -/- doThing)
+withJob doThing name = () <$ Jenkins.post_ (Jenkins.job name -/- doThing)
 
 renameJob :: String -> String -> Text -> Jenkins ()
 renameJob old new name = substitute old new name >>=
-  traverse_ (\name' -> Jenkins.post_ (Jenkins.job name -/- "doRename" -?- "newName" -=- name'))
+  traverse_ (\name' -> () <$ Jenkins.post_ (Jenkins.job name -/- "doRename" -?- "newName" -=- name'))
 
 substitute :: String -> String -> Text -> Jenkins (Maybe Text)
 substitute old new name = do
