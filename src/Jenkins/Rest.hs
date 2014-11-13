@@ -32,6 +32,7 @@ module Jenkins.Rest
   , Jenkins.Rest.traverse_
     -- ** Convenience
   , postXml
+  , groovy
   , reload
   , restart
   , forceRestart
@@ -42,7 +43,7 @@ module Jenkins.Rest
   , JenkinsException(..)
     -- * Reexports
   , liftIO
-  , Request
+  , Http.Request
   ) where
 
 import           Control.Applicative ((<$))
@@ -55,7 +56,10 @@ import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
 import           Data.Text (Text)
-import           Network.HTTP.Client (Request, requestHeaders)
+import qualified Data.Text.Lazy as Text.Lazy
+import qualified Data.Text.Lazy.Encoding as Text.Lazy
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Types as Http
 
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
@@ -167,11 +171,11 @@ get :: Formatter f -> (forall g. Method Complete g) -> JenkinsT m Lazy.ByteStrin
 get (Formatter f) m = liftJ (Get (f m) id)
 
 -- | Perform a @POST@ request
-post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
-post m body = liftJ (Post m body ())
+post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
+post m body = liftJ (Post m body id)
 
 -- | Perform a @POST@ request without a payload
-post_ :: (forall f. Method Complete f) -> JenkinsT m ()
+post_ :: (forall f. Method Complete f) -> JenkinsT m Lazy.ByteString
 post_ m = post m mempty
 
 -- | A simple exception handler. If an exception is raised while the action is
@@ -192,7 +196,7 @@ orElse_ a b = orElse a (\_ -> b)
 -- (think 'Control.Monad.Trans.Reader.local')
 --
 -- This is useful for setting the appropriate headers, response timeouts and the like
-locally :: (Request -> Request) -> JenkinsT m a -> JenkinsT m a
+locally :: (Http.Request -> Http.Request) -> JenkinsT m a -> JenkinsT m a
 locally f j = liftJ (With f j id)
 
 -- | Disconnect from Jenkins. The following actions are ignored.
@@ -223,10 +227,21 @@ traverse_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
 --
 -- Sets up the correct @Content-Type@ header. Mostly useful for updating @config.xml@
 -- files for jobs, views, etc
-postXml :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m ()
-postXml m = locally (\r -> r { requestHeaders = xmlHeader : requestHeaders r }) . post m
+postXml :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
+postXml m = locally (\r -> r { Http.requestHeaders = xmlHeader : Http.requestHeaders r }) . post m
  where
   xmlHeader = ("Content-Type", "text/xml")
+
+-- | Perform a @POST@ request to @/scriptText@
+groovy
+  :: Text.Lazy.Text            -- ^ Groovy source code
+  -> JenkinsT m Text.Lazy.Text
+groovy script = locally (\r -> r { Http.requestHeaders = ascii : Http.requestHeaders r }) $
+  liftJ (Post "scriptText" body Text.Lazy.decodeUtf8)
+ where
+  body  = Lazy.fromChunks
+    [Http.renderSimpleQuery False [("script", Lazy.toStrict (Text.Lazy.encodeUtf8 script))]]
+  ascii = ("Content-Type", "application/x-www-form-urlencoded")
 
 -- | Reload jenkins configuration from disk
 --

@@ -86,7 +86,7 @@ interpret adt = evalState (iter go ([] <$ adt)) (Requests [0..]) where
     fmap (r :) (n mempty)
   go (Post m body n) = do
     r <- render (\x y -> QPost x body y) m
-    fmap (r :) n
+    fmap (r :) (n mempty)
   go Dcon =
     return [QDisconnect]
 

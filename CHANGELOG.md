@@ -1,3 +1,11 @@
+0.7.0
+=====
+
+  * Jenkins' responses to `POST` requests are being read again
+
+  * Added `groovy` to ease the communication with the embedded Groovy
+    interpreter (see example/repl.hs)
+
 0.6.0
 =====
 

@@ -63,7 +63,6 @@ instance Applicative (JenkinsT m) where
 #if MIN_VERSION_free(5,0,0)
   JenkinsT f <*> JenkinsT x = JenkinsT (f <*> x)
 #else
-  -- https://github.com/ekmett/free/pull/80
   JenkinsT f <*> JenkinsT x = JenkinsT (forwards (Backwards f <*> Backwards x))
 #endif
 
@@ -93,7 +92,7 @@ instance MonadError e m => MonadError e (JenkinsT m) where
 
 data JF m a where
   Get :: Method Complete f -> (ByteString -> a) -> JF n a
-  Post :: (forall f. Method Complete f) -> ByteString -> a -> JF m a
+  Post :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JF m a
   Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
   Or   :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
   With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
@@ -101,7 +100,7 @@ data JF m a where
 
 instance Functor (JF m) where
   fmap f (Get  m g)      = Get  m      (f . g)
-  fmap f (Post m body a) = Post m body (f a)
+  fmap f (Post m body g) = Post m body (f . g)
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
   fmap f (Or a b)        = Or (fmap f a) (fmap f . b)
   fmap f (With h j g)    = With h j    (f . g)
@@ -178,13 +177,11 @@ interpreter
 interpreter man = go where
   go :: JF m (InterpT m a) -> InterpT m a
   go (Get m next) = InterpT $ do
-    req <- lift Reader.ask
-    res <- liftIO $ wrapException (liftM Http.responseBody (Http.httpLbs (prepareGet m req) man))
+    res <- request man (prepareGet m)
     runInterpT (next res)
   go (Post m body next) = InterpT $ do
-    req <- lift Reader.ask
-    _   <- liftIO $ wrapException (Http.httpNoBody (preparePost m body req) man)
-    runInterpT next
+    res <- request man (preparePost m body)
+    runInterpT (next res)
   go (Conc ja jb next) = do
     (a, b) <- intoM man $ \run -> concurrently (run ja) (run jb)
     c      <- outoM (return a)
@@ -198,6 +195,12 @@ interpreter man = go where
     res <- mapMaybeT (Reader.local f) (runInterpT (iterInterpT man jenk))
     runInterpT (next res)
   go Dcon = mzero
+
+request :: (MonadIO m, MonadReader e m) => Http.Manager -> (e -> Request) -> m ByteString
+request man f = do
+  req <- ask
+  res <- liftIO $ wrapException (liftM Http.responseBody (Http.httpLbs (f req) man))
+  return res
 
 intoM
   :: forall m a. (MonadIO m, MonadBaseControl IO m)
