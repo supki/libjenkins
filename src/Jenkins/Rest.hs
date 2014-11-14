@@ -186,7 +186,7 @@ orElse a b = liftJ (Or a b)
 -- | A simpler exception handler
 --
 -- @
--- orElse_ a b = 'orElse' a (\_ -> b)
+-- orElse_ a b = 'orElse' a (\\_ -> b)
 -- @
 orElse_ :: JenkinsT m a -> JenkinsT m a -> JenkinsT m a
 orElse_ a b = orElse a (\_ -> b)

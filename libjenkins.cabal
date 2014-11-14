@@ -1,5 +1,5 @@
 name:                libjenkins
-version:             0.6.0
+version:             0.7.0
 synopsis:            Jenkins API interface
 description:         Jenkins API interface. It supports REST and Discovery APIs
 license:             BSD3
@@ -9,10 +9,10 @@ maintainer:          matvey.aksenov@gmail.com
 category:            Network
 build-type:          Simple
 extra-source-files:
-  README.md
-  CHANGELOG.md
+  README.markdown
+  CHANGELOG.markdown
   bench/Concurrency.hs
-  bench/README.md
+  bench/README.markdown
   example/grep-jobs.hs
   example/rename-jobs.hs
   example/discover.hs
@@ -26,7 +26,7 @@ source-repository head
 source-repository this
   type:     git
   location: https://github.com/supki/libjenkins
-  tag:      0.6.0
+  tag:      0.7.0
 
 library
   default-language:
