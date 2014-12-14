@@ -2,7 +2,7 @@ name:                libjenkins
 version:             0.7.0
 synopsis:            Jenkins API interface
 description:         Jenkins API interface. It supports REST and Discovery APIs
-license:             BSD3
+license:             BSD2
 license-file:        LICENSE
 author:              Matvey Aksenov
 maintainer:          matvey.aksenov@gmail.com
