@@ -172,21 +172,16 @@ interpreter man = go where
     runInterpT (next res) req
   go (Conc ja jb next) = do
     (a, b) <- intoM man $ \run -> concurrently (run ja) (run jb)
-    c      <- lift (return a)
-    d      <- lift (return b)
-    next c d
+    next a b
   go (Or ja jb) = do
-    res  <- intoM man $ \run -> run ja `catch` (run . jb)
-    next <- lift (return res)
-    next
+    res <- intoM man $ \run -> run ja `catch` (run . jb)
+    res
   go (With f jenk next) = InterpT $ \req -> do
     res <- runInterpT (iterInterpT man jenk) (f req)
     runInterpT (next res) req
 
 request :: MonadIO m => e -> Http.Manager -> (e -> Request) -> m ByteString
-request req man f = do
-  res <- liftIO $ wrapException (liftM Http.responseBody (Http.httpLbs (f req) man))
-  return res
+request req man f = liftIO $ wrapException (liftM Http.responseBody (Http.httpLbs (f req) man))
 
 intoM
   :: forall m a. (MonadIO m, MonadBaseControl IO m)
