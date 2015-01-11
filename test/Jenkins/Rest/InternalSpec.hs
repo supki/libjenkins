@@ -30,14 +30,14 @@ spec = do
      `shouldPerform`
       Status 404 ""
      `through`
-      Jenkins._Exception._JenkinsException._StatusCodeException._1
+      _Left._JenkinsException._StatusCodeException._1
 
     it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $
       Jenkins.run (Jenkins.defaultMaster & Jenkins.url .~ "foo") (Jenkins.get Jenkins.plain "hi")
      `shouldPerform`
       ("foo", "Invalid URL")
      `through`
-      Jenkins._Exception._JenkinsException._InvalidUrlException
+      _Left._JenkinsException._InvalidUrlException
 
     it "can catch 'HttpException' exceptions related from the queries" $
       Jenkins.run Jenkins.defaultMaster
@@ -45,7 +45,7 @@ spec = do
      `shouldPerform`
       7
      `through`
-      Jenkins._Ok
+      _Right
 
     it "does not catch (and wrap) 'HttpException's not from the queries" $
       Jenkins.run Jenkins.defaultMaster raiseHttp `shouldThrow` _TooManyRetries

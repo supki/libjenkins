@@ -12,7 +12,6 @@ module Jenkins.Rest
     run
   , JenkinsT
   , Jenkins
-  , Result(..)
   , HasMaster(..)
   , Master
   , defaultMaster
@@ -23,7 +22,6 @@ module Jenkins.Rest
   , orElse
   , orElse_
   , locally
-  , disconnect
     -- ** Method
   , module Jenkins.Rest.Method
     -- ** Concurrency
@@ -36,10 +34,6 @@ module Jenkins.Rest
   , reload
   , restart
   , forceRestart
-    -- * Optics
-  , _Exception
-  , _Disconnect
-  , _Ok
   , JenkinsException(..)
     -- * Reexports
   , liftIO
@@ -48,7 +42,6 @@ module Jenkins.Rest
 
 import           Control.Applicative ((<$))
 import           Control.Exception.Lifted (try)
-import           Control.Monad
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import qualified Data.ByteString.Lazy as Lazy
@@ -69,54 +62,16 @@ import           Network.HTTP.Client.Lens.Internal
 
 -- | Run a 'JenkinsT' action
 --
--- A successful 'Result' is either @'Disconnect'@ or @'Ok' v@
---
 -- If a 'JenkinsException' is thrown by performing a request to Jenkins,
 -- 'runJenkins' will catch and wrap it in @'Exception'@. Other exceptions
--- will propagate further
+-- will propagate further untouched.
 run
   :: (MonadIO m, MonadBaseControl IO m, HasMaster t)
-  => t -> JenkinsT m a -> m (Result a)
-run c jenk =
-  either Exception (maybe Disconnect Ok)
- `liftM`
-  try (runInternal (c^.url) (c^.user) (c^.apiToken) jenk)
+  => t -> JenkinsT m a -> m (Either JenkinsException a)
+run c jenk = try (runInternal (c^.url) (c^.user) (c^.apiToken) jenk)
 
 -- | A handy type synonym for the kind of 'JenkinsT' actions that's used the most
 type Jenkins = JenkinsT IO
-
--- | The result of Jenkins REST API queries
-data Result v =
-    Exception JenkinsException
-    -- ^ Exception was thrown while making requests to Jenkins
-  | Disconnect
-    -- ^ The client was explicitly disconnected by the user
-  | Ok v
-    -- ^ The result of uninterrupted execution of a 'JenkinsT' value
-    deriving (Show, Typeable)
-
--- | A prism into Jenkins error
-_Exception :: Prism (Result a) (Result a) JenkinsException JenkinsException
-_Exception = prism' Exception $ \case
-  Exception e -> Just e
-  _           -> Nothing
-{-# INLINE _Exception #-}
-
--- | A prism into disconnect
-_Disconnect :: Prism' (Result a) ()
-_Disconnect = prism' (\_ -> Disconnect) $ \case
-  Disconnect -> Just ()
-  _          -> Nothing
-{-# INLINE _Disconnect #-}
-{-# ANN _Disconnect ("HLint: ignore Use const" :: String) #-}
-
--- | A prism into result
-_Ok :: Prism (Result a) (Result b) a b
-_Ok = prism Ok $ \case
-  Exception e -> Left (Exception e)
-  Disconnect  -> Left Disconnect
-  Ok a        -> Right a
-{-# INLINE _Ok #-}
 
 -- | Jenkins master node connection settings
 class HasMaster t where
@@ -199,10 +154,6 @@ orElse_ a b = orElse a (\_ -> b)
 locally :: (Http.Request -> Http.Request) -> JenkinsT m a -> JenkinsT m a
 locally f j = liftJ (With f j id)
 
--- | Disconnect from Jenkins. The following actions are ignored.
-disconnect :: JenkinsT m a
-disconnect = liftJ Dcon
-
 
 -- | Run two actions concurrently
 concurrently :: JenkinsT m a -> JenkinsT m b -> JenkinsT m (a, b)
@@ -245,23 +196,23 @@ groovy script = locally (\r -> r { Http.requestHeaders = ascii : Http.requestHea
 
 -- | Reload jenkins configuration from disk
 --
--- Performs @/reload@ and disconnects
-reload :: JenkinsT m a
-reload = do post_ "reload"; disconnect
+-- Performs @/reload@
+reload :: JenkinsT m ()
+reload = () <$ post_ "reload"
 
 -- | Restart jenkins safely
 --
--- Performs @/safeRestart@ and /disconnects/
+-- Performs @/safeRestart@
 --
 -- @/safeRestart@ allows all running jobs to complete
-restart :: JenkinsT m a
-restart = do post_ "safeRestart"; disconnect
+restart :: JenkinsT m ()
+restart = () <$ post_ "safeRestart"
 
 -- | Restart jenkins
 --
--- Performs @/restart@ and /disconnects/
+-- Performs @/restart@
 --
 -- @/restart@ restart Jenkins immediately, without waiting for the completion of
 -- the building and/or waiting jobs
-forceRestart :: JenkinsT m a
-forceRestart = do post_ "restart"; disconnect
+forceRestart :: JenkinsT m ()
+forceRestart = () <$ post_ "restart"

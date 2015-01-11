@@ -13,7 +13,7 @@ import           Data.String (fromString)      -- base
 import           Data.Text (Text)              -- text
 import qualified Data.Text as Text             -- text
 import qualified Data.Text.IO as Text          -- text
-import           Jenkins.Rest (Jenkins, (-?-), (-=-), (-/-), liftIO)
+import           Jenkins.Rest (Jenkins, JenkinsException, (-?-), (-=-), (-/-), liftIO)
 import qualified Jenkins.Rest as Jenkins       -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
@@ -41,18 +41,16 @@ main = do
       opts = Options cinf (fromString o) (fromString n)
   res <- rename opts
   case res of
-    Jenkins.Ok _ -> Text.putStrLn "Done."
-    -- disconnected for some reason
-    Jenkins.Disconnect -> die "disconnect!"
+    Right _ -> Text.putStrLn "Done."
     -- something bad happened, show it!
-    Jenkins.Exception e -> die (show e)
+    Left e  -> die (show e)
  where
   die message = do
     hPutStrLn stderr message
     exitFailure
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Jenkins.Result ())
+rename :: Options -> IO (Either JenkinsException ())
 rename (Options { settings, old, new }) = Jenkins.run settings $ do
   -- get jobs names from jenkins "root" API
   res <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")

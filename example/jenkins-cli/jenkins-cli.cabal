@@ -2,7 +2,7 @@ name:                jenkins-cli
 version:             0.1.0.0
 synopsis:            Jenkins CLI client
 description:         Jenkins CLI client
-license:             BSD3
+license:             BSD2
 license-file:        LICENSE
 author:              Matvey Aksenov
 maintainer:          matvey.aksenov@gmail.com
@@ -21,7 +21,7 @@ executable jenkins-cli
     , filepath                >= 1.2     && < 2.0
     , lens                    >= 4.4
     , lens-aeson              >= 1.0.0.1
-    , libjenkins              >= 0.4
+    , libjenkins
     , optparse-applicative    >= 0.11    && < 0.12
     , process
     , text

@@ -3,7 +3,7 @@ version:             0.1.0.0
 synopsis:            libjenkins library examples
 description:
   libjenkins library examples
-license:             BSD3
+license:             BSD2
 license-file:        LICENSE
 author:              Matvey Aksenov
 maintainer:          matvey.aksenov@gmail.com

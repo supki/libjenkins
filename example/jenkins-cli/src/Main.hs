@@ -40,7 +40,7 @@ main = do
     Delete jobs     -> withJobsOrHandle deleteJob stdin jobs
     Rename old new  -> withJobs (renameJob old new)
     Queue           -> waitJobs
-  forOf_ Jenkins._Exception resp (die.show)
+  forOf_ _Left resp (die . show)
 
 die :: String -> IO a
 die message = do

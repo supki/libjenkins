@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -32,7 +33,6 @@ import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Control (MonadTransControl(..), MonadBaseControl(..))
 import           Control.Monad.Trans.Reader (ReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
-import           Control.Monad.Trans.Maybe (MaybeT(..), mapMaybeT)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Text (Text)
@@ -90,13 +90,12 @@ instance MonadError e m => MonadError e (JenkinsT m) where
   m `catchError` f = JenkinsT (unJenkinsT m `catchError` (unJenkinsT . f))
 
 
-data JF m a where
-  Get :: Method Complete f -> (ByteString -> a) -> JF n a
+data JF :: (* -> *) -> * -> * where
+  Get  :: Method Complete f -> (ByteString -> a) -> JF m a
   Post :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JF m a
   Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
   Or   :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
   With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
-  Dcon :: JF m a
 
 instance Functor (JF m) where
   fmap f (Get  m g)      = Get  m      (f . g)
@@ -104,7 +103,6 @@ instance Functor (JF m) where
   fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
   fmap f (Or a b)        = Or (fmap f a) (fmap f . b)
   fmap f (With h j g)    = With h j    (f . g)
-  fmap _ Dcon            = Dcon
 
 -- | Lift 'JF' to 'JenkinsT'
 liftJ :: JF m a -> JenkinsT m a
@@ -122,11 +120,11 @@ instance Exception JenkinsException
 
 runInternal
   :: (MonadIO m, MonadBaseControl IO m)
-  => String -> Text -> Text -> JenkinsT m a -> m (Maybe a)
+  => String -> Text -> Text -> JenkinsT m a -> m a
 runInternal h user token jenk = do
   url <- wrapException (liftIO (Http.parseUrl h))
   bracket (newManager Http.tlsManagerSettings) closeManager $ \m ->
-    Reader.runReaderT (runMaybeT (runInterpT (iterInterpT m jenk)))
+    Reader.runReaderT (runInterpT (iterInterpT m jenk))
       . Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
       $ url
 
@@ -137,7 +135,7 @@ closeManager :: MonadIO m => Http.Manager -> m ()
 closeManager = liftIO . Http.closeManager
 
 newtype InterpT m a = InterpT
-  { runInterpT :: MaybeT (ReaderT Request m) a
+  { runInterpT :: ReaderT Request m a
   } deriving (Functor)
 
 instance (Functor m, Monad m) => Applicative (InterpT m) where
@@ -148,16 +146,8 @@ instance Monad m => Monad (InterpT m) where
   return = InterpT . return
   InterpT m >>= k = InterpT (m >>= runInterpT . k)
 
-instance (Functor m, Monad m) => Alternative (InterpT m) where
-  empty = mzero
-  (<|>) = mplus
-
-instance Monad m => MonadPlus (InterpT m) where
-  mzero = InterpT mzero
-  InterpT x `mplus` InterpT y = InterpT (x `mplus` y)
-
 instance MonadTrans InterpT where
-  lift = InterpT . lift . lift
+  lift = InterpT . lift
 
 -- | Interpret the 'JF' AST in 'InterpT'
 iterInterpT :: (MonadIO m, MonadBaseControl IO m) => Http.Manager -> JenkinsT m a -> InterpT m a
@@ -192,9 +182,8 @@ interpreter man = go where
     next <- outoM (return res)
     next
   go (With f jenk next) = InterpT $ do
-    res <- mapMaybeT (Reader.local f) (runInterpT (iterInterpT man jenk))
+    res <- Reader.local f (runInterpT (iterInterpT man jenk))
     runInterpT (next res)
-  go Dcon = mzero
 
 request :: (MonadIO m, MonadReader e m) => Http.Manager -> (e -> Request) -> m ByteString
 request man f = do
@@ -205,18 +194,18 @@ request man f = do
 intoM
   :: forall m a. (MonadIO m, MonadBaseControl IO m)
   => Http.Manager
-  -> ((forall b. JenkinsT m b -> m (StT (ReaderT Request) (StT MaybeT b))) -> m a)
+  -> ((forall b. JenkinsT m b -> m (StT (ReaderT Request) b)) -> m a)
   -> InterpT m a
 intoM m f = InterpT $
-  liftWith $ \run' -> liftWith $ \run''' ->
+  liftWith $ \run' ->
     let
-      run :: JenkinsT m t -> m (StT (ReaderT Request) (StT MaybeT t))
-      run = run''' . run' . runInterpT . iterInterpT m
+      run :: JenkinsT m t -> m (StT (ReaderT Request) t)
+      run = run' . runInterpT . iterInterpT m
     in
       f run
 
-outoM :: Monad m => m (StT (ReaderT Request) (StT MaybeT b)) -> InterpT m b
-outoM = InterpT . restoreT . restoreT
+outoM :: Monad m => m (StT (ReaderT Request) b) -> InterpT m b
+outoM = InterpT . restoreT
 
 prepareGet :: Method Complete f -> Request -> Request
 prepareGet m r = r

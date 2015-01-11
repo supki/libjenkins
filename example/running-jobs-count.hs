@@ -25,7 +25,7 @@ main = do
         & Jenkins.user .~ fromString user
         & Jenkins.apiToken .~ fromString token
   jobs <- Jenkins.run creds getJobs
-  printf "Running jobs count: %d\n" (lengthOf (Jenkins._Ok.running) jobs)
+  printf "Running jobs count: %d\n" (lengthOf (_Right.running) jobs)
 
 getJobs :: Jenkins ByteString
 getJobs = Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[color]")

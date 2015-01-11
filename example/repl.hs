@@ -22,7 +22,7 @@ import qualified System.IO as IO                      -- base
 main :: IO ()
 main = do
   conf <- envConf
-  Disconnect
+  Right ()
        <- Jenkins.run conf loop
   return ()
 
@@ -37,7 +37,7 @@ loop :: Jenkins ()
 loop = do
   reply <- prompt
   case reply of
-    ":q" -> disconnect
+    ":q" -> return ()
     _    -> do
       res <- groovy reply
       liftIO $ do Text.putStr res; flush;

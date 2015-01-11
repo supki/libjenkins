@@ -1,3 +1,9 @@
+0.8.0
+=====
+
+  * Removed the support for disconnects, thus simplifying the public API slightly.
+    Note that `reload`, `restard`, and `forceRestart` do not disconnect automatically anymore.
+
 0.7.0
 =====
 

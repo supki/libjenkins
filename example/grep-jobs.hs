@@ -35,7 +35,7 @@ grep :: String -> Jenkins.Master -> IO [Text]
 grep regex conn = do
   res <- Jenkins.run conn $
     Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
-  filterM (match regex) (res ^.. Jenkins._Ok.key "jobs".values.key "name"._String)
+  filterM (match regex) (res ^.. _Right.key "jobs".values.key "name"._String)
 
 -- | Match job name again Perl regex
 match :: String -> Text -> IO Bool
