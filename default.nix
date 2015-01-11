@@ -5,9 +5,9 @@ haskellPackages.cabal.mkDerivation (self: rec {
   version = "0.8.0";
   src = builtins.filterSource (path: type: type != "unknown") ./.;
   buildDepends = with haskellPackages; [
-    attoparsec free httpClient httpClientTls httpTypes liftedAsync
-    liftedBase monadControl mtl network networkUri profunctors text
-    transformers
+    attoparsec free httpClient httpTypes httpConduit liftedAsync
+    liftedBase monadControl mtl network networkUri profunctors
+    text transformers
   ];
   testDepends = with haskellPackages; buildDepends ++ [
     async doctest filepath hspec hspecExpectationsLens lens xmlConduit

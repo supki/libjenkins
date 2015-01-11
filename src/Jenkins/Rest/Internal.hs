@@ -28,17 +28,19 @@ import           Control.Monad.Error (MonadError(..))
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState(..))
-import           Control.Monad.Trans.Free.Church (FT, iterTM)
 import           Control.Monad.Trans.Class (MonadTrans(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
+import           Control.Monad.Trans.Free.Church (FT, iterTM)
+import           Control.Monad.Trans.Resource (MonadResource)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString as Strict
+import           Data.Conduit (ResumableSource)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable)
-import           Network.HTTP.Client (Request, HttpException)
-import qualified Network.HTTP.Client as Http
-import qualified Network.HTTP.Client.TLS as Http
+import           Network.HTTP.Conduit (Request, HttpException)
+import qualified Network.HTTP.Conduit as Http
 import           Network.HTTP.Types (Status(..))
 
 import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
@@ -89,18 +91,20 @@ instance MonadError e m => MonadError e (JenkinsT m) where
 
 
 data JF :: (* -> *) -> * -> * where
-  Get  :: Method Complete f -> (ByteString -> a) -> JF m a
-  Post :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JF m a
-  Conc :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
-  Or   :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
-  With :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
+  Get    :: Method Complete f -> (ByteString -> a) -> JF m a
+  Stream :: MonadResource m => Method Complete f -> (ResumableSource m Strict.ByteString -> a) -> JF m a
+  Post   :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JF m a
+  Conc   :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
+  Or     :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
+  With   :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
 
 instance Functor (JF m) where
-  fmap f (Get  m g)      = Get  m      (f . g)
+  fmap f (Get m g)       = Get m (f . g)
+  fmap f (Stream m g)    = Stream m (f . g)
   fmap f (Post m body g) = Post m body (f . g)
-  fmap f (Conc m n g)    = Conc m n    (\a b -> f (g a b))
+  fmap f (Conc m n g)    = Conc m n (\a b -> f (g a b))
   fmap f (Or a b)        = Or (fmap f a) (fmap f . b)
-  fmap f (With h j g)    = With h j    (f . g)
+  fmap f (With h j g)    = With h j (f . g)
 
 -- | Lift 'JF' to 'JenkinsT'
 liftJ :: JF m a -> JenkinsT m a
@@ -120,8 +124,8 @@ runInternal
   :: (MonadIO m, MonadBaseControl IO m)
   => String -> Text -> Text -> JenkinsT m a -> m a
 runInternal h user token jenk = do
-  url <- wrapException (liftIO (Http.parseUrl h))
-  bracket (newManager Http.tlsManagerSettings) closeManager $ \m ->
+  url <- liftIO (wrapException (Http.parseUrl h))
+  bracket (newManager Http.conduitManagerSettings) closeManager $ \m ->
     runInterpT (iterInterpT m jenk)
       . Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
       $ url
@@ -165,10 +169,13 @@ interpreter
 interpreter man = go where
   go :: JF m (InterpT m a) -> InterpT m a
   go (Get m next) = InterpT $ \req -> do
-    res <- request req man (prepareGet m)
+    res <- oneshotReq (prepareGet m req) man
+    runInterpT (next res) req
+  go (Stream m next) = InterpT $ \req -> do
+    res <- streamReq (prepareGet m req) man
     runInterpT (next res) req
   go (Post m body next) = InterpT $ \req -> do
-    res <- request req man (preparePost m body)
+    res <- oneshotReq (preparePost m body req) man
     runInterpT (next res) req
   go (Conc ja jb next) = do
     (a, b) <- intoM man $ \run -> concurrently (run ja) (run jb)
@@ -180,8 +187,13 @@ interpreter man = go where
     res <- runInterpT (iterInterpT man jenk) (f req)
     runInterpT (next res) req
 
-request :: MonadIO m => e -> Http.Manager -> (e -> Request) -> m ByteString
-request req man f = liftIO $ wrapException (liftM Http.responseBody (Http.httpLbs (f req) man))
+oneshotReq :: MonadIO m => Request -> Http.Manager -> m ByteString
+oneshotReq req = liftIO . wrapException . liftM Http.responseBody . Http.httpLbs req
+
+streamReq
+  :: (MonadBaseControl IO m, MonadResource m)
+  => Request -> Http.Manager -> m (ResumableSource m Strict.ByteString)
+streamReq req = wrapException . liftM Http.responseBody . Http.http req
 
 intoM
   :: forall m a. (MonadIO m, MonadBaseControl IO m)

@@ -17,6 +17,7 @@ module Jenkins.Rest
   , defaultMaster
     -- ** Combinators
   , get
+  , stream
   , post
   , post_
   , orElse
@@ -44,14 +45,17 @@ import           Control.Applicative ((<$))
 import           Control.Exception.Lifted (try)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
+import           Control.Monad.Trans.Resource (MonadResource)
 import qualified Data.ByteString.Lazy as Lazy
+import qualified Data.ByteString as Strict
+import           Data.Conduit (ResumableSource)
 import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
 import           Data.Monoid (mempty)
 import           Data.Text (Text)
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Encoding as Text.Lazy
-import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Conduit as Http
 import qualified Network.HTTP.Types as Http
 
 import           Jenkins.Rest.Internal
@@ -120,10 +124,18 @@ defaultMaster = Master
 
 -- | Perform a @GET@ request
 --
--- While the return type is the /lazy/ @Bytestring@, the entire response
--- sits in the memory anyway: lazy I/O is not used at the least
+-- While the return type is /lazy/ @Bytestring@, the entire response
+-- sits in memory anyway: lazy I/O is not used at the least
 get :: Formatter f -> (forall g. Method Complete g) -> JenkinsT m Lazy.ByteString
 get (Formatter f) m = liftJ (Get (f m) id)
+
+-- | Perform a streaming @GET@ request
+--
+-- 'stream', unlike 'get', is constant-space
+stream
+  :: MonadResource m
+  => Formatter f -> (forall g. Method Complete g) -> JenkinsT m (ResumableSource m Strict.ByteString)
+stream (Formatter f) m = liftJ (Stream (f m) id)
 
 -- | Perform a @POST@ request
 post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
