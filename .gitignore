@@ -3,3 +3,5 @@ cabal-dev/
 cabal.sandbox.config
 .cabal-sandbox
 README.html
+result
+env.nix
