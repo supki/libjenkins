@@ -25,27 +25,18 @@ spec = do
       raiseIO   = liftIO (throwIO (mkIOError doesNotExistErrorType "foo" Nothing Nothing))
 
   describe "runJenkins" $ do
-    it "wraps uncatched 'HttpException' exceptions from the queries in 'Error'" $
-      Jenkins.run Jenkins.defaultMaster (Jenkins.get Jenkins.plain "hi")
-     `shouldPerform`
-      Status 404 ""
-     `through`
-      _Left._JenkinsException._StatusCodeException._1
+    it "wraps uncatched 'HttpException' exceptions from the queries in 'Error'" $ do
+      r <- Jenkins.run Jenkins.defaultMaster (Jenkins.get Jenkins.plain "hi")
+      r `shouldPreview` Status 404 "" `through` _Left._JenkinsException._StatusCodeException._1
 
-    it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $
-      Jenkins.run (Jenkins.defaultMaster & Jenkins.url .~ "foo") (Jenkins.get Jenkins.plain "hi")
-     `shouldPerform`
-      ("foo", "Invalid URL")
-     `through`
-      _Left._JenkinsException._InvalidUrlException
+    it "wraps uncatched 'HttpException' exceptions from the URL parsing in 'Error'" $ do
+      r <- Jenkins.run (Jenkins.defaultMaster & Jenkins.url .~ "foo") (Jenkins.get Jenkins.plain "hi")
+      r `shouldPreview` ("foo", "Invalid URL") `through` _Left._JenkinsException._InvalidUrlException
 
-    it "can catch 'HttpException' exceptions related from the queries" $
-      Jenkins.run Jenkins.defaultMaster
+    it "can catch 'HttpException' exceptions related from the queries" $ do
+      r <- Jenkins.run Jenkins.defaultMaster
         (liftJ (Or (Jenkins.get Jenkins.plain "hi" >> return 4) (\_ -> return 7)))
-     `shouldPerform`
-      7
-     `through`
-      _Right
+      r `shouldPreview` 7 `through` _Right
 
     it "does not catch (and wrap) 'HttpException's not from the queries" $
       Jenkins.run Jenkins.defaultMaster raiseHttp `shouldThrow` _TooManyRetries
