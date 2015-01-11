@@ -30,9 +30,7 @@ import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState(..))
 import           Control.Monad.Trans.Free.Church (FT, iterTM)
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.Control (MonadTransControl(..), MonadBaseControl(..))
-import           Control.Monad.Trans.Reader (ReaderT)
-import qualified Control.Monad.Trans.Reader as Reader
+import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Text (Text)
@@ -124,7 +122,7 @@ runInternal
 runInternal h user token jenk = do
   url <- wrapException (liftIO (Http.parseUrl h))
   bracket (newManager Http.tlsManagerSettings) closeManager $ \m ->
-    Reader.runReaderT (runInterpT (iterInterpT m jenk))
+    runInterpT (iterInterpT m jenk)
       . Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
       $ url
 
@@ -135,7 +133,7 @@ closeManager :: MonadIO m => Http.Manager -> m ()
 closeManager = liftIO . Http.closeManager
 
 newtype InterpT m a = InterpT
-  { runInterpT :: ReaderT Request m a
+  { runInterpT :: Request -> m a
   } deriving (Functor)
 
 instance (Functor m, Monad m) => Applicative (InterpT m) where
@@ -143,11 +141,11 @@ instance (Functor m, Monad m) => Applicative (InterpT m) where
   (<*>) = ap
 
 instance Monad m => Monad (InterpT m) where
-  return = InterpT . return
-  InterpT m >>= k = InterpT (m >>= runInterpT . k)
+  return = InterpT . return . return
+  InterpT m >>= k = InterpT (\req -> m req >>= \a -> runInterpT (k a) req)
 
 instance MonadTrans InterpT where
-  lift = InterpT . lift
+  lift = InterpT . const
 
 -- | Interpret the 'JF' AST in 'InterpT'
 iterInterpT :: (MonadIO m, MonadBaseControl IO m) => Http.Manager -> JenkinsT m a -> InterpT m a
@@ -166,46 +164,36 @@ interpreter
   -> JF m (InterpT m a) -> InterpT m a
 interpreter man = go where
   go :: JF m (InterpT m a) -> InterpT m a
-  go (Get m next) = InterpT $ do
-    res <- request man (prepareGet m)
-    runInterpT (next res)
-  go (Post m body next) = InterpT $ do
-    res <- request man (preparePost m body)
-    runInterpT (next res)
+  go (Get m next) = InterpT $ \req -> do
+    res <- request req man (prepareGet m)
+    runInterpT (next res) req
+  go (Post m body next) = InterpT $ \req -> do
+    res <- request req man (preparePost m body)
+    runInterpT (next res) req
   go (Conc ja jb next) = do
     (a, b) <- intoM man $ \run -> concurrently (run ja) (run jb)
-    c      <- outoM (return a)
-    d      <- outoM (return b)
+    c      <- lift (return a)
+    d      <- lift (return b)
     next c d
   go (Or ja jb) = do
     res  <- intoM man $ \run -> run ja `catch` (run . jb)
-    next <- outoM (return res)
+    next <- lift (return res)
     next
-  go (With f jenk next) = InterpT $ do
-    res <- Reader.local f (runInterpT (iterInterpT man jenk))
-    runInterpT (next res)
+  go (With f jenk next) = InterpT $ \req -> do
+    res <- runInterpT (iterInterpT man jenk) (f req)
+    runInterpT (next res) req
 
-request :: (MonadIO m, MonadReader e m) => Http.Manager -> (e -> Request) -> m ByteString
-request man f = do
-  req <- ask
+request :: MonadIO m => e -> Http.Manager -> (e -> Request) -> m ByteString
+request req man f = do
   res <- liftIO $ wrapException (liftM Http.responseBody (Http.httpLbs (f req) man))
   return res
 
 intoM
   :: forall m a. (MonadIO m, MonadBaseControl IO m)
   => Http.Manager
-  -> ((forall b. JenkinsT m b -> m (StT (ReaderT Request) b)) -> m a)
+  -> ((forall b. JenkinsT m b -> m b) -> m a)
   -> InterpT m a
-intoM m f = InterpT $
-  liftWith $ \run' ->
-    let
-      run :: JenkinsT m t -> m (StT (ReaderT Request) t)
-      run = run' . runInterpT . iterInterpT m
-    in
-      f run
-
-outoM :: Monad m => m (StT (ReaderT Request) b) -> InterpT m b
-outoM = InterpT . restoreT
+intoM m f = InterpT $ \req -> f (\x -> runInterpT (iterInterpT m x) req)
 
 prepareGet :: Method Complete f -> Request -> Request
 prepareGet m r = r
