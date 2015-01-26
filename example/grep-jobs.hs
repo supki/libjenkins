@@ -7,10 +7,10 @@ import           Control.Lens                              -- lens
 import           Control.Exception.Lens                    -- lens
 import           Control.Monad                             -- base
 import           Data.Aeson.Lens (key, values, _String)    -- lens-aeson
-import           Data.String (fromString)                  -- base
 import           Data.Text (Text)                          -- text
 import qualified Data.Text as Text                         -- text
 import qualified Data.Text.IO as Text                      -- text
+import           Env                                       -- envparse
 import           Jenkins.Rest ((-?-), (-=-))
 import qualified Jenkins.Rest as Jenkins                   -- libjenkins
 import           System.Environment (getArgs)              -- base
@@ -21,14 +21,19 @@ import           Text.Printf (printf)                      -- base
 
 main :: IO ()
 main = do
-  url:user:token:regex:_ <- getArgs
-  jobs <- grep regex $ Jenkins.defaultMaster
-    & Jenkins.url .~ url
-    & Jenkins.user .~ fromString user
-    & Jenkins.apiToken .~ fromString token
+  regex : _
+       <- getArgs
+  conf <- envConf
+  jobs <- grep regex conf
   case jobs of
     [] -> throwingM _ExitFailure 1
     _  -> mapM_ Text.putStrLn jobs
+
+envConf :: IO Jenkins.Master
+envConf = Env.parse (desc "Grep for jobs") $
+  Jenkins.Master <$> var str "JENKINS_URL"       (help "Jenkins URL")
+                 <*> var str "JENKINS_USERNAME"  (help "Jenkins username")
+                 <*> var str "JENKINS_API_TOKEN" (help "Jenkins API token")
 
 -- | Filter matching job names
 grep :: String -> Jenkins.Master -> IO [Text]

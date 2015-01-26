@@ -7,7 +7,6 @@ module Config
 #endif
   ) where
 
-import           Control.Lens
 import           Control.Applicative
 import           Data.Aeson
 import qualified Data.ByteString.Lazy as ByteString
@@ -24,10 +23,11 @@ instance FromJSON Config where
     url   <- o .: "url"
     user  <- o .: "user"
     token <- o .: "api-token"
-    return (Config (Jenkins.defaultMaster
-      & set Jenkins.url url
-      & set Jenkins.user user
-      & set Jenkins.apiToken token))
+    return . Config $ Jenkins.Master
+      { Jenkins.url = url
+      , Jenkins.user = user
+      , Jenkins.apiToken = token
+      }
   parseJSON _ = empty
 
 readConfig :: IO Jenkins.Master

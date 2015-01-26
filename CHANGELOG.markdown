@@ -1,6 +1,8 @@
 0.8.0
 =====
 
+  * Simplified Jenkins master node configuration record back
+
   * Added `stream` to provide convenient streaming
 
   * Removed the support for disconnects, thus simplifying the public API slightly.

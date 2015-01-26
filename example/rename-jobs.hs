@@ -13,45 +13,39 @@ import           Data.String (fromString)      -- base
 import           Data.Text (Text)              -- text
 import qualified Data.Text as Text             -- text
 import qualified Data.Text.IO as Text          -- text
+import           Env                           -- envparse
 import           Jenkins.Rest (Jenkins, JenkinsException, (-?-), (-=-), (-/-), liftIO)
 import qualified Jenkins.Rest as Jenkins       -- libjenkins
 import           System.Environment (getArgs)  -- base
 import           System.Exit (exitFailure)     -- base
-import           System.IO (hPutStrLn, stderr) -- base
+import qualified System.IO as IO               -- base
 
 {-# ANN module ("HLint: ignore Use camelCase" :: String) #-}
 
 
--- | Program options
-data Options = Options
-  { settings :: Jenkins.Master
-  , old      :: Text
-  , new      :: Text
-  }
-
-
 main :: IO ()
 main = do
-  -- more useful help on error
-  url:user:token:o:n:_ <- getArgs
-  let cinf = Jenkins.defaultMaster
-        & Jenkins.url .~ url
-        & Jenkins.user .~ fromString user
-        & Jenkins.apiToken .~ fromString token
-      opts = Options cinf (fromString o) (fromString n)
-  res <- rename opts
+  o : n : _
+       <- getArgs
+  conf <- envConf
+  res  <- rename conf (fromString o) (fromString n)
   case res of
     Right _ -> Text.putStrLn "Done."
     -- something bad happened, show it!
     Left e  -> die (show e)
- where
-  die message = do
-    hPutStrLn stderr message
-    exitFailure
+
+die :: String -> IO a
+die m = do IO.hPutStrLn IO.stderr m; exitFailure
+
+envConf :: IO Jenkins.Master
+envConf = Env.parse (desc "Rename jobs") $
+  Jenkins.Master <$> var str "JENKINS_URL"       (help "Jenkins URL")
+                 <*> var str "JENKINS_USERNAME"  (help "Jenkins username")
+                 <*> var str "JENKINS_API_TOKEN" (help "Jenkins API token")
 
 -- | Prompt to rename all jobs matching pattern
-rename :: Options -> IO (Either JenkinsException ())
-rename (Options { settings, old, new }) = Jenkins.run settings $ do
+rename :: Jenkins.Master -> Text -> Text -> IO (Either JenkinsException ())
+rename conf old new = Jenkins.run conf $ do
   -- get jobs names from jenkins "root" API
   res <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs".values.key "name"._String

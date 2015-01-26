@@ -20,7 +20,12 @@ spec = do
           , ", \"api-token\": \"12345678\""
           , "}"
           ]
-        config = Config (Jenkins.defaultMaster & set Jenkins.apiToken "12345678")
+        config = Config $
+          Jenkins.Master
+            { Jenkins.url = "http://example.com/jenkins"
+            , Jenkins.user = "jenkins"
+            , Jenkins.apiToken = "12345678"
+            }
     decodeStrict (Text.encodeUtf8 configJson) `shouldHave` _Just.only config
 
   it "parses custom configuration" $ do
@@ -30,10 +35,10 @@ spec = do
           , ", \"api-token\": \"87654321\""
           , "}"
           ]
-        customConfig = Config
-          ( Jenkins.defaultMaster
-          & set Jenkins.url "https://google.com/hudson"
-          & set Jenkins.user "google"
-          & set Jenkins.apiToken "87654321"
-          )
+        customConfig = Config $
+          Jenkins.Master
+            { Jenkins.url = "https://google.com/hudson"
+            , Jenkins.user = "google"
+            , Jenkins.apiToken = "87654321"
+            }
     decodeStrict (Text.encodeUtf8 customConfigText) `shouldHave` _Just.only customConfig

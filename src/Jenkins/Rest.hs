@@ -12,9 +12,7 @@ module Jenkins.Rest
     run
   , JenkinsT
   , Jenkins
-  , HasMaster(..)
-  , Master
-  , defaultMaster
+  , Master(..)
     -- ** Combinators
   , get
   , stream
@@ -61,7 +59,6 @@ import qualified Network.HTTP.Types as Http
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
 import           Jenkins.Rest.Method.Internal
-import           Network.HTTP.Client.Lens.Internal
 
 
 -- | Run a 'JenkinsT' action
@@ -69,57 +66,18 @@ import           Network.HTTP.Client.Lens.Internal
 -- If a 'JenkinsException' is thrown by performing a request to Jenkins,
 -- 'runJenkins' will catch and wrap it in @'Exception'@. Other exceptions
 -- will propagate further untouched.
-run
-  :: (MonadIO m, MonadBaseControl IO m, HasMaster t)
-  => t -> JenkinsT m a -> m (Either JenkinsException a)
-run c jenk = try (runInternal (c^.url) (c^.user) (c^.apiToken) jenk)
+run :: (MonadIO m, MonadBaseControl IO m) => Master -> JenkinsT m a -> m (Either JenkinsException a)
+run m jenk = try (runInternal (url m) (user m) (apiToken m) jenk)
 
 -- | A handy type synonym for the kind of 'JenkinsT' actions that's used the most
 type Jenkins = JenkinsT IO
 
--- | Jenkins master node connection settings
-class HasMaster t where
-  master :: Lens' t Master
-
-  -- | Jenkins master node URL
-  url :: HasMaster t => Lens' t String
-  url = master . \f x -> f (_url x) <&> \p -> x { _url = p }
-  {-# INLINE url #-}
-
-  -- | Jenkins user
-  user :: HasMaster t => Lens' t Text
-  user = master . \f x -> f (_user x) <&> \p -> x { _user = p }
-  {-# INLINE user #-}
-
-  -- | Jenkins user's password or API token
-  apiToken :: HasMaster t => Lens' t Text
-  apiToken = master . \f x -> f (_apiToken x) <&> \p -> x { _apiToken = p }
-  {-# INLINE apiToken #-}
-
 -- | Jenkins master node connection settings token
 data Master = Master
-  { _url      :: String -- ^ Jenkins URL
-  , _user     :: Text   -- ^ Jenkins user
-  , _apiToken :: Text   -- ^ Jenkins user API token or password
+  { url      :: String -- ^ Jenkins URL
+  , user     :: Text   -- ^ Jenkins user
+  , apiToken :: Text   -- ^ Jenkins user API token or password
   } deriving (Show, Eq, Typeable, Data)
-
-instance HasMaster Master where
-  master = id
-  {-# INLINE master #-}
-
--- | Default Jenkins master node connection settings token
---
--- @
--- view 'url'      defaultConnectInfo = \"http:\/\/example.com\/jenkins\"
--- view 'user'     defaultConnectInfo = \"jenkins\"
--- view 'apiToken' defaultConnectInfo = \"secret\"
--- @
-defaultMaster :: Master
-defaultMaster = Master
-  { _url      = "http://example.com/jenkins"
-  , _user     = "jenkins"
-  , _apiToken = "secret"
-  }
 
 
 -- | Perform a @GET@ request
