@@ -33,6 +33,7 @@ library
     Haskell2010
   build-depends:
       base          >= 4.6 && < 5
+    , async         >= 2.0
     , attoparsec    >= 0.12
     , bytestring    >= 0.9
     , conduit       >= 1.2
@@ -41,7 +42,6 @@ library
     , http-conduit  >= 2.1
     , http-client   >= 0.4
     , http-types    >= 0.8
-    , lifted-async  >= 0.2
     , monad-control >= 0.3
     , profunctors   >= 4.2
     , mtl           >= 2.1

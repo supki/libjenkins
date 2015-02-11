@@ -1,7 +1,7 @@
 0.8.0
 =====
 
-  * Removed `lifted-base` dependency
+  * Dropped `lifted-base` and `lifted-async` dependencies
 
   * Simplified Jenkins master node configuration record back
 

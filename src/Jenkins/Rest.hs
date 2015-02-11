@@ -73,6 +73,7 @@ run m jenk = try (runInternal (url m) (user m) (apiToken m) jenk)
 
 try :: MonadBaseControl IO m => m a -> m (Either JenkinsException a)
 try m = sequence . fmap restoreM =<< liftBaseWith (\magic -> Unlifted.try (magic m))
+{-# INLINABLE try #-}
 
 -- | A handy type synonym for the kind of 'JenkinsT' actions that's used the most
 type Jenkins = JenkinsT IO

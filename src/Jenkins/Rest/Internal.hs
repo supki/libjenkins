@@ -26,8 +26,9 @@ import           Control.Applicative
 #if ! MIN_VERSION_free(5,0,0)
 import           Control.Applicative.Backwards (Backwards(..))
 #endif
-import           Control.Concurrent.Async.Lifted (concurrently)
-import           Control.Exception (Exception(..))
+import           Control.Concurrent.Async (Async)
+import qualified Control.Concurrent.Async as Unlifted
+import           Control.Exception (Exception(..), SomeException, throwIO)
 import qualified Control.Exception as Unlifted
 import           Control.Monad
 import           Control.Monad.Free.Church (liftF)
@@ -36,7 +37,7 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState(..))
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.Control (MonadBaseControl(..), control)
+import           Control.Monad.Trans.Control (MonadBaseControl(..), control, liftBaseOp_)
 import           Control.Monad.Trans.Free.Church (FT, iterTM)
 import           Control.Monad.Trans.Resource (MonadResource)
 import           Control.Monad.Writer (MonadWriter(..))
@@ -228,16 +229,43 @@ preparePost m body r = r
     if 200 <= st && st < 400 then Nothing else Just . toException $ Http.StatusCodeException s hs cookie_jar
 
 wrapException :: (MonadBaseControl IO m, MonadIO m) => m a -> m a
-wrapException m = m `catch` (throwIO .  JenkinsHttpException)
+wrapException m = m `catch` (liftIO . throwIO .  JenkinsHttpException)
+
+concurrently :: (MonadBaseControl IO m, MonadIO m) => m a -> m b -> m (a, b)
+concurrently ma mb =
+  withAsync ma $ \a ->
+  withAsync mb $ \b ->
+  waitBoth a b
+{-# INLINABLE concurrently #-}
+
+withAsync :: (MonadBaseControl IO m, MonadIO m) => m a -> (Async (StM m a) -> m b) -> m b
+withAsync action inner = mask $ \restore -> do
+  a <- liftBaseWith (\magic -> Unlifted.async (magic (restore action)))
+  r <- restore (inner a) `catch` \e ->
+    liftIO (do Unlifted.cancel a; throwIO (e :: SomeException))
+  liftIO (Unlifted.cancel a)
+  return r
+{-# INLINABLE withAsync #-}
+
+waitBoth :: (MonadBaseControl IO m, MonadIO m) => Async (StM m a) -> Async (StM m b) -> m (a, b)
+waitBoth aa ab = do
+  (ma, mb) <- liftIO (Unlifted.waitBoth aa ab)
+  a <- restoreM ma
+  b <- restoreM mb
+  return (a, b)
+{-# INLINABLE waitBoth #-}
+
+mask :: MonadBaseControl IO m => ((forall a. m a -> m a) -> m b) -> m b
+mask f = control $ \magic -> Unlifted.mask (\g -> magic (f (liftBaseOp_ g)))
+{-# INLINABLE mask #-}
 
 bracket :: (MonadBaseControl IO m) => m a -> (a -> m b) -> (a -> m c) -> m c
 bracket f g h = control $ \magic ->
   Unlifted.bracket (magic f)
                    (\b -> magic (restoreM b >>= g))
                    (\c -> magic (restoreM c >>= h))
+{-# INLINABLE bracket #-}
 
 catch :: (MonadBaseControl IO m, Exception e) => m a -> (e -> m a) -> m a
 catch m h = control (\magic -> Unlifted.catch (magic m) (magic . h))
-
-throwIO :: (MonadBaseControl IO m, MonadIO m, Exception e) => e -> m a
-throwIO = liftIO . Unlifted.throwIO
+{-# INLINABLE catch #-}
