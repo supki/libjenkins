@@ -13,7 +13,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_HADDOCK hide #-}
 -- | Jenkins REST API interface internals
-module Jenkins.Rest.Internal where
+module Jenkins.Rest.Internal
+  ( JenkinsT(..)
+  , liftJ
+  , runInternal
+  , JF(..)
+  , JenkinsException(..)
+  , iter
+  ) where
 
 import           Control.Applicative
 #if ! MIN_VERSION_free(5,0,0)
