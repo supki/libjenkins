@@ -42,7 +42,6 @@ library
     , http-client   >= 0.4
     , http-types    >= 0.8
     , lifted-async  >= 0.2
-    , lifted-base   >= 0.2.3
     , monad-control >= 0.3
     , profunctors   >= 4.2
     , mtl           >= 2.1

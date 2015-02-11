@@ -21,7 +21,7 @@ import           Control.Applicative.Backwards (Backwards(..))
 #endif
 import           Control.Concurrent.Async.Lifted (concurrently)
 import           Control.Exception (Exception(..))
-import           Control.Exception.Lifted (bracket, catch, throwIO)
+import qualified Control.Exception as Unlifted
 import           Control.Monad
 import           Control.Monad.Free.Church (liftF)
 import           Control.Monad.Error (MonadError(..))
@@ -29,7 +29,7 @@ import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState(..))
 import           Control.Monad.Trans.Class (MonadTrans(..))
-import           Control.Monad.Trans.Control (MonadBaseControl(..))
+import           Control.Monad.Trans.Control (MonadBaseControl(..), control)
 import           Control.Monad.Trans.Free.Church (FT, iterTM)
 import           Control.Monad.Trans.Resource (MonadResource)
 import           Control.Monad.Writer (MonadWriter(..))
@@ -220,5 +220,17 @@ preparePost m body r = r
   statusCheck s@(Status st _) hs cookie_jar =
     if 200 <= st && st < 400 then Nothing else Just . toException $ Http.StatusCodeException s hs cookie_jar
 
-wrapException :: MonadBaseControl IO m => m a -> m a
+wrapException :: (MonadBaseControl IO m, MonadIO m) => m a -> m a
 wrapException m = m `catch` (throwIO .  JenkinsHttpException)
+
+bracket :: (MonadBaseControl IO m) => m a -> (a -> m b) -> (a -> m c) -> m c
+bracket f g h = control $ \magic ->
+  Unlifted.bracket (magic f)
+                   (\b -> magic (restoreM b >>= g))
+                   (\c -> magic (restoreM c >>= h))
+
+catch :: (MonadBaseControl IO m, Exception e) => m a -> (e -> m a) -> m a
+catch m h = control (\magic -> Unlifted.catch (magic m) (magic . h))
+
+throwIO :: (MonadBaseControl IO m, MonadIO m, Exception e) => e -> m a
+throwIO = liftIO . Unlifted.throwIO

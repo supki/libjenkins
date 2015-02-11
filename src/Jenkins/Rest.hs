@@ -40,7 +40,7 @@ module Jenkins.Rest
   ) where
 
 import           Control.Applicative ((<$))
-import           Control.Exception.Lifted (try)
+import qualified Control.Exception as Unlifted
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import           Control.Monad.Trans.Resource (MonadResource)
@@ -53,8 +53,10 @@ import           Data.Monoid (mempty)
 import           Data.Text (Text)
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Encoding as Text.Lazy
+import           Data.Traversable (sequence)
 import qualified Network.HTTP.Conduit as Http
 import qualified Network.HTTP.Types as Http
+import           Prelude hiding (sequence)
 
 import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
@@ -68,6 +70,9 @@ import           Jenkins.Rest.Method.Internal
 -- will propagate further untouched.
 run :: (MonadIO m, MonadBaseControl IO m) => Master -> JenkinsT m a -> m (Either JenkinsException a)
 run m jenk = try (runInternal (url m) (user m) (apiToken m) jenk)
+
+try :: MonadBaseControl IO m => m a -> m (Either JenkinsException a)
+try m = sequence . fmap restoreM =<< liftBaseWith (\magic -> Unlifted.try (magic m))
 
 -- | A handy type synonym for the kind of 'JenkinsT' actions that's used the most
 type Jenkins = JenkinsT IO

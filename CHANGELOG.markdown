@@ -1,6 +1,8 @@
 0.8.0
 =====
 
+  * Removed `lifted-base` dependency
+
   * Simplified Jenkins master node configuration record back
 
   * Added `stream` to provide convenient streaming

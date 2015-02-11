@@ -12,7 +12,7 @@ import           System.IO.Error.Lens (errorType, _NoSuchThing)
 
 import           Jenkins.Rest (Jenkins, liftIO)
 import qualified Jenkins.Rest as Jenkins
-import           Jenkins.Rest.Internal
+import           Jenkins.Rest.Internal hiding (throwIO)
 import           Network.HTTP.Client.Lens (_StatusCodeException, _InvalidUrlException, _TooManyRetries)
 
 _JenkinsException :: Iso' JenkinsException HttpException
