@@ -3,12 +3,12 @@
 
   * Dropped `lifted-base` and `lifted-async` dependencies
 
-  * Simplified Jenkins master node configuration record back
+  * Simplified the Jenkins master node configuration record
 
   * Added `stream` to provide convenient streaming
 
   * Removed the support for disconnects, thus simplifying the public API slightly.
-    Note that `reload`, `restard`, and `forceRestart` do not disconnect automatically anymore.
+    Note that `reload`, `restart`, and `forceRestart` do not disconnect automatically anymore.
 
 0.7.0
 =====
