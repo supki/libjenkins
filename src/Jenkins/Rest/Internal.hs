@@ -23,7 +23,7 @@ module Jenkins.Rest.Internal
   ) where
 
 import           Control.Applicative
-#if ! MIN_VERSION_free(5,0,0)
+#if ! MIN_VERSION_free(4,10,0)
 import           Control.Applicative.Backwards (Backwards(..))
 #endif
 import           Control.Concurrent.Async (Async)
@@ -68,7 +68,7 @@ instance MonadTrans JenkinsT where
 
 instance Applicative (JenkinsT m) where
   pure = JenkinsT . pure
-#if MIN_VERSION_free(5,0,0)
+#if MIN_VERSION_free(4,10,0)
   JenkinsT f <*> JenkinsT x = JenkinsT (f <*> x)
 #else
   JenkinsT f <*> JenkinsT x = JenkinsT (forwards (Backwards f <*> Backwards x))
