@@ -20,10 +20,6 @@ view :: Lens' s a -> s -> a
 view l = getConst . l Const
 {-# INLINE view #-}
 
-(^.) :: s -> Lens' s a -> a
-(^.) = flip view
-{-# INLINE (^.) #-}
-
 prism :: (b -> t) -> (s -> Either t a) -> Prism s t a b
 prism bt seta = dimap seta (either pure (fmap bt)) . right'
 {-# INLINE prism #-}
