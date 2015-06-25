@@ -1,9 +1,12 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | Rename jobs matching supplied pattern
 module Main (main) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative           -- base
+#endif
 import           Control.Lens                  -- lens
 import           Control.Monad (when)          -- base
 import           Data.Aeson.Lens               -- lens-aeson
@@ -47,7 +50,7 @@ envConf = Env.parse (desc "Rename jobs") $
 rename :: Jenkins.Master -> Text -> Text -> IO (Either JenkinsException ())
 rename conf old new = Jenkins.run conf $ do
   -- get jobs names from jenkins "root" API
-  res <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
+  res <- Jenkins.get Jenkins.json ("" -?- "tree" -=- "jobs[name]")
   let jobs = res ^.. key "jobs".values.key "name"._String
   for_ jobs rename_job
  where

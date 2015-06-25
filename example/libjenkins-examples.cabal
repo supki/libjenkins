@@ -73,3 +73,30 @@ executable repl
     , libjenkins
     , text
     , transformers
+
+executable jenkins-cli
+  default-language:
+    Haskell2010
+  build-depends:
+      aeson                   >= 0.7     && < 0.10
+    , base                    >= 4.6     && < 5
+    , bytestring
+    , directory
+    , filepath                >= 1.2     && < 2.0
+    , lens                    >= 4.4
+    , lens-aeson              >= 1.0.0.1
+    , libjenkins
+    , optparse-applicative    >= 0.11    && < 0.12
+    , process
+    , text
+    , xml-conduit
+  hs-source-dirs:
+    jenkins-cli/src
+  main-is:
+    Main.hs
+  other-modules:
+    Config
+    Options
+  ghc-options:
+    -Wall
+    -fno-warn-unused-do-bind

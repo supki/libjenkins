@@ -1,6 +1,5 @@
 module Main where
 
-import Control.Applicative ((<$>))
 import Control.Monad (forM, liftM)
 import Data.List (isSuffixOf)
 import System.Directory (getDirectoryContents, doesDirectoryExist)
@@ -25,4 +24,4 @@ sources root = do
   isSource path = any (`isSuffixOf` path) [".hs", ".lhs"]
 
 contents :: FilePath -> IO [FilePath]
-contents dir = filter (`notElem` [".", ".."]) <$> getDirectoryContents dir
+contents = fmap (filter (`notElem` [".", ".."])) . getDirectoryContents

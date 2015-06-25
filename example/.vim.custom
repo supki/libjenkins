@@ -4,9 +4,7 @@ endfunction
 
 let g:syntastic_haskell_hdevtools_args = s:hdevtools_options
 	\ (
-	\ [ '-isrc'
-	\ , '-i../../src'
-	\ , '-itest'
+	\ [ '-ijenkins-cli/src'
 	\ , '-O0'
 	\ , '-fdefer-type-errors'
 	\ , '-Wall'
@@ -14,6 +12,6 @@ let g:syntastic_haskell_hdevtools_args = s:hdevtools_options
 	\ , '-fno-warn-type-defaults'
 	\ , '-DTEST'
 	\ , '-optP-include'
-	\ , '-optP../../dist/build/autogen/cabal_macros.h'
+	\ , '-optPdist/build/autogen/cabal_macros.h'
 	\ ]
 	\ )

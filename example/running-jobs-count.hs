@@ -27,7 +27,7 @@ envConf = Env.parse (desc "Get running jobs count") $
                  <*> var str "JENKINS_API_TOKEN" (help "Jenkins API token")
 
 getJobs :: Jenkins ByteString
-getJobs = Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[color]")
+getJobs = Jenkins.get Jenkins.json ("" -?- "tree" -=- "jobs[color]")
 
 running :: Fold ByteString ()
 running = key "jobs".values.key "color"._String.only "blue_anime"

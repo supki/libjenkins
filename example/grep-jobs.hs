@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | Grep Jenkins instance jobs with Perl regex
 module Main (main) where
@@ -39,7 +38,7 @@ envConf = Env.parse (desc "Grep for jobs") $
 grep :: String -> Jenkins.Master -> IO [Text]
 grep regex conn = do
   res <- Jenkins.run conn $
-    Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
+    Jenkins.get Jenkins.json ("" -?- "tree" -=- "jobs[name]")
   filterM (match regex) (res ^.. _Right.key "jobs".values.key "name"._String)
 
 -- | Match job name again Perl regex

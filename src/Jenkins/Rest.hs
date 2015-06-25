@@ -39,8 +39,8 @@ module Jenkins.Rest
   , Http.Request
   ) where
 
-import           Control.Applicative ((<$))
 import qualified Control.Exception as Unlifted
+import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import           Control.Monad.Trans.Resource (MonadResource)
@@ -49,7 +49,6 @@ import qualified Data.ByteString as Strict
 import           Data.Conduit (ResumableSource)
 import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
-import           Data.Monoid (mempty)
 import           Data.Text (Text)
 import qualified Data.Text.Lazy as Text.Lazy
 import qualified Data.Text.Lazy.Encoding as Text.Lazy
@@ -90,7 +89,7 @@ data Master = Master
 --
 -- While the return type is /lazy/ @Bytestring@, the entire response
 -- sits in memory anyway: lazy I/O is not used at the least
-get :: Formatter f -> (forall g. Method Complete g) -> JenkinsT m Lazy.ByteString
+get :: Formatter f -> (forall g. Method 'Complete g) -> JenkinsT m Lazy.ByteString
 get (Formatter f) m = liftJ (Get (f m) id)
 
 -- | Perform a streaming @GET@ request
@@ -98,16 +97,16 @@ get (Formatter f) m = liftJ (Get (f m) id)
 -- 'stream', unlike 'get', is constant-space
 stream
   :: MonadResource m
-  => Formatter f -> (forall g. Method Complete g) -> JenkinsT m (ResumableSource m Strict.ByteString)
+  => Formatter f -> (forall g. Method 'Complete g) -> JenkinsT m (ResumableSource m Strict.ByteString)
 stream (Formatter f) m = liftJ (Stream (f m) id)
 
 -- | Perform a @POST@ request
-post :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
+post :: (forall f. Method 'Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
 post m body = liftJ (Post m body id)
 
 -- | Perform a @POST@ request without a payload
-post_ :: (forall f. Method Complete f) -> JenkinsT m Lazy.ByteString
-post_ m = post m mempty
+post_ :: (forall f. Method 'Complete f) -> JenkinsT m Lazy.ByteString
+post_ m = post m Lazy.empty
 
 -- | A simple exception handler. If an exception is raised while the action is
 -- executed the handler is executed with it as an argument
@@ -147,14 +146,14 @@ traverse f = foldr go (return [])
 --
 -- @'traverse_' : 'Data.Foldable.traverse_' :: 'concurrently' : 'Control.Applicative.liftA2' (,)@
 traverse_ :: F.Foldable f => (a -> JenkinsT m b) -> f a -> JenkinsT m ()
-traverse_ f = F.foldr (\x xs -> () <$ concurrently (f x) xs) (return ())
+traverse_ f = F.foldr (\x -> void . concurrently (f x)) (return ())
 
 
 -- | Perform a @POST@ request to Jenkins with the XML document
 --
 -- Sets up the correct @Content-Type@ header. Mostly useful for updating @config.xml@
 -- files for jobs, views, etc
-postXml :: (forall f. Method Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
+postXml :: (forall f. Method 'Complete f) -> Lazy.ByteString -> JenkinsT m Lazy.ByteString
 postXml m = locally (\r -> r { Http.requestHeaders = xmlHeader : Http.requestHeaders r }) . post m
  where
   xmlHeader = ("Content-Type", "text/xml")
@@ -174,7 +173,7 @@ groovy script = locally (\r -> r { Http.requestHeaders = ascii : Http.requestHea
 --
 -- Performs @/reload@
 reload :: JenkinsT m ()
-reload = () <$ post_ "reload"
+reload = void (post_ "reload")
 
 -- | Restart jenkins safely
 --
@@ -182,7 +181,7 @@ reload = () <$ post_ "reload"
 --
 -- @/safeRestart@ allows all running jobs to complete
 restart :: JenkinsT m ()
-restart = () <$ post_ "safeRestart"
+restart = void (post_ "safeRestart")
 
 -- | Restart jenkins
 --
@@ -191,4 +190,4 @@ restart = () <$ post_ "safeRestart"
 -- @/restart@ restart Jenkins immediately, without waiting for the completion of
 -- the building and/or waiting jobs
 forceRestart :: JenkinsT m ()
-forceRestart = () <$ post_ "restart"
+forceRestart = void (post_ "restart")

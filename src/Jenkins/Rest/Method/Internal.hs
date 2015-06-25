@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,7 +15,9 @@ module Jenkins.Rest.Method.Internal where
 import           Control.Applicative
 import           Data.ByteString (ByteString)
 import           Data.Data (Data, Typeable)
-import           Data.Monoid (Monoid(..), (<>))
+#if __GLASGOW_HASKELL__ < 710
+import           Data.Monoid (Monoid(..))
+#endif
 import           Data.String (IsString(..))
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -32,18 +35,18 @@ infixr 5 :/, :&
 
 -- | Jenkins RESTFul API method encoding
 data Method :: Type -> Format -> * where
-  Empty :: Method Query f
-  Text  :: Text -> Method Complete f
-  (:/)  :: Method Complete f -> Method Complete f -> Method Complete f
-  (:=)  :: Text -> Maybe Text -> Method Query f
-  (:&)  :: Method Query f -> Method Query f -> Method Query f
-  (:?)  :: Method Complete f -> Method Query f -> Method Complete f
-  (:@)  :: Method Complete f -> SFormat f -> Method Complete f
+  Empty :: Method 'Query f
+  Text  :: Text -> Method 'Complete f
+  (:/)  :: Method 'Complete f -> Method 'Complete f -> Method 'Complete f
+  (:=)  :: Text -> Maybe Text -> Method 'Query f
+  (:&)  :: Method 'Query f -> Method 'Query f -> Method 'Query f
+  (:?)  :: Method 'Complete f -> Method 'Query f -> Method 'Complete f
+  (:@)  :: Method 'Complete f -> SFormat f -> Method 'Complete f
 
 deriving instance Show (SFormat f) => Show (Method t f)
 
 -- | Only to support numeric literals
-instance t ~ Complete => Num (Method t f) where
+instance t ~ 'Complete => Num (Method t f) where
   (+)         = error "Method.(+): not supposed to be used"
   (-)         = error "Method.(-): not supposed to be used"
   (*)         = error "Method.(*): not supposed to be used"
@@ -51,10 +54,10 @@ instance t ~ Complete => Num (Method t f) where
   signum      = error "Method.signum: not supposed to be used"
   fromInteger = fromString . show
 
-instance IsString (Method Complete f) where
+instance IsString (Method 'Complete f) where
   fromString = Text . fromString
 
-instance IsString (Method Query f) where
+instance IsString (Method 'Query f) where
   fromString str = fromString str := Nothing
 
 -- | Method types
@@ -66,45 +69,45 @@ data Format = Json | Xml | Python
   deriving (Show, Eq, Typeable, Data)
 
 data SFormat :: Format -> * where
-  SJson   :: SFormat Json
-  SXml    :: SFormat Xml
-  SPython :: SFormat Python
+  SJson   :: SFormat 'Json
+  SXml    :: SFormat 'Xml
+  SPython :: SFormat 'Python
 
 
 -- | 'Formatter's know how to append the \"api/$format\" string to the method URL
 newtype Formatter g = Formatter
-  { unFormatter :: (forall f. Method Complete f) -> Method Complete g
+  { unFormatter :: (forall f. Method 'Complete f) -> Method 'Complete g
   }
 
-format :: Formatter f -> (forall g. Method Complete g) -> ByteString
+format :: Formatter f -> (forall g. Method 'Complete g) -> ByteString
 format f m = render (unFormatter f m)
 
 -- | Render 'Method' to something that can be sent over the wire
-render :: Method Complete f -> ByteString
+render :: Method 'Complete f -> ByteString
 render m = maybe id (flip (insert "?")) (renderQ m) . maybe id (flip (insert "/")) (renderF m) . renderP $ m
 
 -- | Render the method path
-renderP :: Method Complete f -> ByteString
+renderP :: Method 'Complete f -> ByteString
 renderP (Text s) = renderT s
 renderP (x :/ y) = renderP x `slash` renderP y
 renderP (x :? _) = renderP x
 renderP (x :@ _) = renderP x
 
 -- | Render the query string
-renderQ :: Method Complete f -> Maybe ByteString
+renderQ :: Method 'Complete f -> Maybe ByteString
 renderQ (Text _)  = Nothing
 renderQ (q :/ q') = renderQ q <|> renderQ q'
 renderQ (q :@ _)  = renderQ q
 renderQ (_ :? q)  = Just (renderQ' q)
 
-renderQ' :: Method Query f -> ByteString
+renderQ' :: Method 'Query f -> ByteString
 renderQ' (x :& y)       = insert "&" (renderQ' x) (renderQ' y)
 renderQ' (x := Just y)  = insert "=" (renderT x)  (renderT y)
 renderQ' (x := Nothing) = renderT x
 renderQ' Empty          = renderT ""
 
 -- | Render the response format string
-renderF :: Method Complete f -> Maybe ByteString
+renderF :: Method 'Complete f -> Maybe ByteString
 renderF (_ :@ SJson)   = Just "api/json"
 renderF (_ :@ SXml)    = Just "api/xml"
 renderF (_ :@ SPython) = Just "api/python"
@@ -138,4 +141,4 @@ insert :: (Monoid m, Eq m) => m -> m -> m -> m
 insert t x y
   | x == mempty = y
   | y == mempty = x
-  | otherwise   = x <> t <> y
+  | otherwise   = x `mappend` t `mappend` y

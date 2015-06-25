@@ -41,7 +41,7 @@ spec = do
     it "can catch 'HttpException' exceptions related from the queries" $ do
       r <- Jenkins.run master
         (liftJ (Or (Jenkins.get Jenkins.plain "hi" >> return 4) (\_ -> return 7)))
-      r `shouldPreview` 7 `through` _Right
+      r `shouldPreview` (7 :: Integer) `through` _Right
 
     it "does not catch (and wrap) 'HttpException's not from the queries" $
       Jenkins.run master raiseHttp `shouldThrow` _TooManyRetries

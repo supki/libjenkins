@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 -- | A simple Groovy REPL (type :q to quit)
 --
@@ -9,7 +10,9 @@
 -- @
 module Main (main) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative       -- base
+#endif
 import           Data.Text.Lazy (Text)     -- text
 import qualified Data.Text.Lazy.IO as Text -- text
 import           Env                       -- envparse

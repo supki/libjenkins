@@ -60,6 +60,8 @@ library
     Jenkins.Rest.Method.Internal
     Network.HTTP.Client.Lens
     Network.HTTP.Client.Lens.Internal
+  ghc-options:
+    -Wall
 
 test-suite doctest
   default-language:
@@ -75,6 +77,8 @@ test-suite doctest
     test
   main-is:
     Doctest.hs
+  ghc-options:
+    -Wall
 
 test-suite spec
   default-language:
@@ -116,5 +120,7 @@ test-suite spec
     Jenkins.RestSpec
     Jenkins.Rest.InternalSpec
     Jenkins.Rest.Method.InternalSpec
+  ghc-options:
+    -Wall
   cpp-options:
     -DTEST

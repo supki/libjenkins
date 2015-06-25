@@ -1,9 +1,12 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 module Main (main) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative
+#endif
 import           Control.Lens
 import           Control.Monad (filterM)
 import           Data.Aeson (Value)
@@ -52,12 +55,12 @@ withJobs j = getJobs >>= traverse_ j
 
 getJobs :: Jenkins [Text]
 getJobs = do
-  res <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name]")
+  res <- Jenkins.get Jenkins.json ("" -?- "tree" -=- "jobs[name]")
   return $ res ^.. key "jobs".values.key "name"._String
 
 grepJobs :: [Greppable] -> Jenkins ()
 grepJobs greppables = do
-  json_root <- Jenkins.get Jenkins.json ("/" -?- "tree" -=- "jobs[name,description,color]")
+  json_root <- Jenkins.get Jenkins.json ("" -?- "tree" -=- "jobs[name,description,color]")
   liftIO $ do
     let jobs = json_root ^.. key "jobs".values
     filtered_jobs <- applyFilters (map grep greppables) jobs
@@ -102,7 +105,7 @@ waitJobs :: Jenkins ()
 waitJobs = Jenkins.get Jenkins.json Jenkins.queue >>= liftIO . printJobs
  where printJobs info = mapM_ Text.putStrLn (info ^.. key "items".values.key "task".key "name"._String)
 
-withJob :: (forall f. Jenkins.Method Jenkins.Complete f) -> Text -> Jenkins ()
+withJob :: (forall f. Jenkins.Method 'Jenkins.Complete f) -> Text -> Jenkins ()
 withJob doThing name = () <$ Jenkins.post_ (Jenkins.job name -/- doThing)
 
 renameJob :: String -> String -> Text -> Jenkins ()

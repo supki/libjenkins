@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveDataTypeable #-}
@@ -21,7 +22,9 @@ module Jenkins.Rest.Internal
   , iter
   ) where
 
+#if __GLASGOW_HASKELL__ < 710
 import           Control.Applicative
+#endif
 import           Control.Concurrent.Async (Async)
 import qualified Control.Concurrent.Async as Unlifted
 import           Control.Exception (Exception(..), SomeException, throwIO)
@@ -91,9 +94,9 @@ instance MonadError e m => MonadError e (JenkinsT m) where
 
 
 data JF :: (* -> *) -> * -> * where
-  Get    :: Method Complete f -> (ByteString -> a) -> JF m a
-  Stream :: MonadResource m => Method Complete f -> (ResumableSource m Strict.ByteString -> a) -> JF m a
-  Post   :: (forall f. Method Complete f) -> ByteString -> (ByteString -> a) -> JF m a
+  Get    :: Method 'Complete f -> (ByteString -> a) -> JF m a
+  Stream :: MonadResource m => Method 'Complete f -> (ResumableSource m Strict.ByteString -> a) -> JF m a
+  Post   :: (forall f. Method 'Complete f) -> ByteString -> (ByteString -> a) -> JF m a
   Conc   :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
   Or     :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
   With   :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
@@ -202,13 +205,13 @@ intoM
   -> InterpT m a
 intoM m f = InterpT $ \req -> f (\x -> runInterpT (iterInterpT m x) req)
 
-prepareGet :: Method Complete f -> Request -> Request
+prepareGet :: Method 'Complete f -> Request -> Request
 prepareGet m r = r
   { Http.method = "GET"
   , Http.path   = Http.path r `slash` render m
   }
 
-preparePost :: Method Complete f -> ByteString -> Request -> Request
+preparePost :: Method 'Complete f -> ByteString -> Request -> Request
 preparePost m body r = r
   { Http.checkStatus   = statusCheck
   , Http.redirectCount = 0

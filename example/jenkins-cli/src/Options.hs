@@ -1,7 +1,10 @@
+{-# LANGUAGE CPP #-}
 module Options where
 
 import Control.Lens hiding (argument)
+#if __GLASGOW_HASKELL__ < 710
 import Data.Monoid (mconcat)
+#endif
 import Data.Foldable (asum)
 import Data.Text (Text, pack)
 import Options.Applicative hiding (subparser)

@@ -5,8 +5,8 @@ ghc:
     - 7.6
 
 install:
-    - cabal install --enable-tests --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal example/jenkins-cli/jenkins-cli.cabal
+    - cabal install --enable-tests --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal
 
 script:
-    - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal example/jenkins-cli/jenkins-cli.cabal
+    - cabal install --enable-tests libjenkins.cabal example/libjenkins-examples.cabal
     - cabal sdist && cabal install --enable-tests dist/libjenkins-*.tar.gz

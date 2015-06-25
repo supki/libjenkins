@@ -43,7 +43,7 @@ discover
   -> IO [Discover]
 discover t = do
   (b, addr) <- broadcastSocket
-  ByteString.sendTo b (ByteString.pack [0, 0, 0, 0]) addr -- does not matter what to send
+  _ <- ByteString.sendTo b (ByteString.pack [0, 0, 0, 0]) addr -- does not matter what to send
 
   msgs <- while (timeout t (readAnswer b))
 

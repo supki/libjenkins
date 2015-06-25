@@ -2,7 +2,7 @@
 -- | Discover Jenkins server on the network
 module Main (main) where
 
-import           Data.Monoid ((<>), mempty) -- base
+import           Data.Monoid ((<>))         -- base
 import           Data.Text (Text)           -- text
 import qualified Data.Text as Text          -- text
 import qualified Data.Text.IO as Text       -- text
@@ -23,7 +23,7 @@ main = do
 -- | Pretty print Jenkins discovery responses
 pretty :: Discover -> Text
 pretty x = Text.unwords $
-  "Jenkins" : version x : maybe mempty (return . between "(" ")") (serverId x) ++ ["at", url x]
+  "Jenkins" : version x : maybe [] (return . between "(" ")") (serverId x) ++ ["at", url x]
  where
   between l r t = l <> t <> r
 

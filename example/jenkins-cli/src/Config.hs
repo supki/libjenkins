@@ -1,10 +1,7 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Config
   ( readConfig
-#ifdef TEST
   , Config(..)
-#endif
   ) where
 
 import           Control.Applicative
