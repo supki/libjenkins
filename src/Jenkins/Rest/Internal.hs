@@ -128,16 +128,9 @@ runInternal
   => String -> Text -> Text -> JenkinsT m a -> m a
 runInternal h user token jenk = do
   url <- liftIO (wrapException (Http.parseUrl h))
-  bracket (newManager Http.conduitManagerSettings) closeManager $ \m ->
-    runInterpT (iterInterpT m jenk)
-      . Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token)
-      $ url
-
-newManager :: MonadIO m => Http.ManagerSettings -> m Http.Manager
-newManager = liftIO . Http.newManager
-
-closeManager :: MonadIO m => Http.Manager -> m ()
-closeManager = liftIO . Http.closeManager
+  man <- liftIO (Http.newManager Http.tlsManagerSettings)
+  runInterpT (iterInterpT man jenk)
+             (Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token) url)
 
 newtype InterpT m a = InterpT
   { runInterpT :: Request -> m a
@@ -253,13 +246,6 @@ waitBoth aa ab = do
 mask :: MonadBaseControl IO m => ((forall a. m a -> m a) -> m b) -> m b
 mask f = control $ \magic -> Unlifted.mask (\g -> magic (f (liftBaseOp_ g)))
 {-# INLINABLE mask #-}
-
-bracket :: (MonadBaseControl IO m) => m a -> (a -> m b) -> (a -> m c) -> m c
-bracket f g h = control $ \magic ->
-  Unlifted.bracket (magic f)
-                   (\b -> magic (restoreM b >>= g))
-                   (\c -> magic (restoreM c >>= h))
-{-# INLINABLE bracket #-}
 
 catch :: (MonadBaseControl IO m, Exception e) => m a -> (e -> m a) -> m a
 catch m h = control (\magic -> Unlifted.catch (magic m) (magic . h))

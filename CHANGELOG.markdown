@@ -1,3 +1,8 @@
+0.8.2
+=====
+
+  * Stopped using the deprecated stuff in `http-client{,-tls}`.
+
 0.8.1
 =====
 
