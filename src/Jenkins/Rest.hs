@@ -41,7 +41,7 @@ module Jenkins.Rest
 
 import qualified Control.Exception as Unlifted
 import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Trans (MonadIO(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import           Control.Monad.Trans.Resource (MonadResource)
 import qualified Data.ByteString.Lazy as Lazy

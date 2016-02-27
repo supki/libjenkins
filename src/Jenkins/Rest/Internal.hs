@@ -31,11 +31,10 @@ import           Control.Exception (Exception(..), SomeException, throwIO)
 import qualified Control.Exception as Unlifted
 import           Control.Monad
 import           Control.Monad.Free.Church (liftF)
-import           Control.Monad.Error (MonadError(..))
-import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState(..))
-import           Control.Monad.Trans.Class (MonadTrans(..))
+import           Control.Monad.Trans (MonadIO(..), MonadTrans(..))
 import           Control.Monad.Trans.Control (MonadBaseControl(..), control, liftBaseOp_)
 import           Control.Monad.Trans.Free.Church (FT, iterTM)
 import           Control.Monad.Trans.Resource (MonadResource)

@@ -1,7 +1,14 @@
+0.8.3
+=====
+
+  * Switched to `Control.Monad.Except`
+
+  * Dropped support for GHC < 7.10
+
 0.8.2
 =====
 
-  * Stopped using the deprecated stuff in `http-client{,-tls}`.
+  * Stopped using the deprecated stuff in `http-client{,-tls}`
 
 0.8.1
 =====

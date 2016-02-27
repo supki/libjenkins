@@ -1,5 +1,5 @@
 name:                libjenkins
-version:             0.8.2
+version:             0.8.3
 synopsis:            Jenkins API interface
 description:         Jenkins API interface. It supports REST and Discovery APIs
 license:             BSD2
@@ -17,6 +17,7 @@ extra-source-files:
   example/rename-jobs.hs
   example/discover.hs
   example/running-jobs-count.hs
+  example/repl.hs
 cabal-version:       >= 1.10
 
 source-repository head
@@ -26,13 +27,13 @@ source-repository head
 source-repository this
   type:     git
   location: https://github.com/supki/libjenkins
-  tag:      0.8.2
+  tag:      0.8.3
 
 library
   default-language:
     Haskell2010
   build-depends:
-      base          >= 4.6 && < 5
+      base          >= 4.8 && < 5
     , async         >= 2.0
     , attoparsec    >= 0.12
     , bytestring    >= 0.9
@@ -44,12 +45,11 @@ library
     , http-types    >= 0.8
     , monad-control >= 0.3
     , profunctors   >= 4.2
-    , mtl           >= 2.1
+    , mtl           >= 2.2.1
     , network       >= 2.6
     , network-uri   >= 2.6
     , resourcet     >= 1.1
     , text          >= 0.11
-    , transformers
   hs-source-dirs:
     src
   exposed-modules:
