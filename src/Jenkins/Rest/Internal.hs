@@ -30,6 +30,7 @@ import qualified Control.Concurrent.Async as Unlifted
 import           Control.Exception (Exception(..), SomeException, throwIO)
 import qualified Control.Exception as Unlifted
 import           Control.Monad
+import           Control.Monad.Catch (MonadThrow(..))
 import           Control.Monad.Free.Church (liftF)
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.Reader (MonadReader(..))
@@ -90,6 +91,9 @@ instance MonadState s m => MonadState s (JenkinsT m) where
 instance MonadError e m => MonadError e (JenkinsT m) where
   throwError = JenkinsT . throwError
   m `catchError` f = JenkinsT (unJenkinsT m `catchError` (unJenkinsT . f))
+
+instance MonadThrow m => MonadThrow (JenkinsT m) where
+  throwM = JenkinsT . throwM
 
 
 data JF :: (* -> *) -> * -> * where

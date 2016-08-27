@@ -39,6 +39,7 @@ library
     , bytestring    >= 0.9
     , conduit       >= 1.2
     , containers
+    , exceptions    >= 0.8.3
     , free          >= 4.10
     , http-conduit  >= 2.1.8
     , http-client   >= 0.4.30
@@ -92,6 +93,7 @@ test-suite spec
     , bytestring
     , conduit
     , containers
+    , exceptions
     , free
     , hspec
     , hspec-expectations-lens
