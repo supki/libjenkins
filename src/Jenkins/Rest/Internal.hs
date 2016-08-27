@@ -126,7 +126,7 @@ runInternal
   :: (MonadIO m, MonadBaseControl IO m)
   => String -> Text -> Text -> JenkinsT m a -> m a
 runInternal h user token jenk = do
-  url <- liftIO (wrapException (Http.parseUrl h))
+  url <- liftIO (wrapException (Http.parseUrlThrow h))
   man <- liftIO (Http.newManager Http.tlsManagerSettings)
   runInterpT (iterInterpT man jenk)
              (Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token) url)

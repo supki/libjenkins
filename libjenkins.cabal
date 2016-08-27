@@ -41,7 +41,7 @@ library
     , containers
     , free          >= 4.10
     , http-conduit  >= 2.1.8
-    , http-client   >= 0.4.19
+    , http-client   >= 0.4.30
     , http-types    >= 0.8
     , monad-control >= 0.3
     , profunctors   >= 4.2
