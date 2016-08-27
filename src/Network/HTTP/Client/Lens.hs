@@ -16,10 +16,8 @@ module Network.HTTP.Client.Lens
   , rawBody
   , decompress
   , redirectCount
-  , checkStatus
   , responseTimeout
   , cookieJar
-  , getConnectionWrapper
     -- * 'HttpException' prisms
   , AsHttpException(..)
   ) where
@@ -99,11 +97,6 @@ redirectCount :: Lens' H.Request Int
 redirectCount f req = f (H.redirectCount req) <&> \rc' -> req { H.redirectCount = rc' }
 {-# INLINE redirectCount #-}
 
--- | 'H.checkStatus' lens
-checkStatus :: Lens' H.Request (H.Status -> H.ResponseHeaders -> H.CookieJar -> Maybe SomeException)
-checkStatus f req = f (H.checkStatus req) <&> \cs' -> req { H.checkStatus = cs' }
-{-# INLINE checkStatus #-}
-
 -- | 'H.responseTimeout' lens
 responseTimeout :: Lens' H.Request (Maybe Int)
 responseTimeout f req = f (H.responseTimeout req) <&> \rt' -> req { H.responseTimeout = rt' }
@@ -113,19 +106,6 @@ responseTimeout f req = f (H.responseTimeout req) <&> \rt' -> req { H.responseTi
 cookieJar :: Lens' H.Request (Maybe H.CookieJar)
 cookieJar f req = f (H.cookieJar req) <&> \mcj' -> req { H.cookieJar = mcj' }
 {-# INLINE cookieJar #-}
-
--- | 'H.getConnectionWrapper'
-getConnectionWrapper
-  :: Lens' H.Request
-      ( Maybe Int
-      -> H.HttpException
-      -> IO (H.ConnRelease, H.Connection, H.ManagedConn)
-      -> IO (Maybe Int, (H.ConnRelease, H.Connection, H.ManagedConn))
-      )
-getConnectionWrapper f req =
-  f (H.getConnectionWrapper req) <&> \wat' -> req { H.getConnectionWrapper = wat' }
-{-# INLINE getConnectionWrapper #-}
-
 
 -- | @http-conduit@ exceptions
 class AsHttpException t where
