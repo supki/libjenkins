@@ -16,7 +16,6 @@ module Network.HTTP.Client.Lens
   , rawBody
   , decompress
   , redirectCount
-  , responseTimeout
   , cookieJar
     -- * 'HttpException' prisms
   , AsHttpException(..)
@@ -96,11 +95,6 @@ decompress f req = f (H.decompress req) <&> \btb' -> req { H.decompress = btb' }
 redirectCount :: Lens' H.Request Int
 redirectCount f req = f (H.redirectCount req) <&> \rc' -> req { H.redirectCount = rc' }
 {-# INLINE redirectCount #-}
-
--- | 'H.responseTimeout' lens
-responseTimeout :: Lens' H.Request (Maybe Int)
-responseTimeout f req = f (H.responseTimeout req) <&> \rt' -> req { H.responseTimeout = rt' }
-{-# INLINE responseTimeout #-}
 
 -- | 'H.cookieJar'
 cookieJar :: Lens' H.Request (Maybe H.CookieJar)
