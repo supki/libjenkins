@@ -6,6 +6,7 @@ import Control.Lens hiding (argument)
 import Data.Monoid (mconcat)
 #endif
 import Data.Foldable (asum)
+import Data.Monoid ((<>))
 import Data.Text (Text, pack)
 import Options.Applicative hiding (subparser)
 import Options.Applicative.Builder.Internal
@@ -70,7 +71,7 @@ subparser :: Mod CommandFields a -> Parser a
 subparser m = mkParser d g rdr
  where
   Mod _ d g = metavar "COMMAND" <> m
-  rdr = uncurry CmdReader (mkCommand m)
+  rdr = (\(a, b, c) -> CmdReader a b c) (mkCommand m)
 
 subcommands :: Mod CommandFields Command
 subcommands = mconcat
