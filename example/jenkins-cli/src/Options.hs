@@ -6,6 +6,7 @@ import Control.Lens hiding (argument)
 import Data.Monoid (mconcat)
 #endif
 import Data.Foldable (asum)
+import Data.Monoid ((<>))
 import Data.Text (Text, pack)
 import Options.Applicative hiding (subparser)
 import Options.Applicative.Builder.Internal
