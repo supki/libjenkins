@@ -39,14 +39,17 @@ import           Control.Monad.Trans.Control (MonadBaseControl(..), control, lif
 import           Control.Monad.Trans.Free.Church (FT, iterTM)
 import           Control.Monad.Trans.Resource (MonadResource)
 import           Control.Monad.Writer (MonadWriter(..))
-import           Data.ByteString.Lazy (ByteString)
-import qualified Data.ByteString as Strict
+import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Lazy as Lazy (ByteString)
+import qualified Data.ByteString.Lazy as ByteString.Lazy
 import           Data.Conduit (ResumableSource)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable)
 import           Network.HTTP.Conduit (Request, HttpException)
 import qualified Network.HTTP.Conduit as Http
+import qualified Network.HTTP.Client as Http (brReadSome)
+import qualified Network.HTTP.Client.Internal as Http (throwHttp)
 import           Network.HTTP.Types (Status(..))
 
 import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
@@ -93,9 +96,9 @@ instance MonadError e m => MonadError e (JenkinsT m) where
 
 
 data JF :: (* -> *) -> * -> * where
-  Get    :: Method 'Complete f -> (ByteString -> a) -> JF m a
-  Stream :: MonadResource m => Method 'Complete f -> (ResumableSource m Strict.ByteString -> a) -> JF m a
-  Post   :: (forall f. Method 'Complete f) -> ByteString -> (ByteString -> a) -> JF m a
+  Get    :: Method 'Complete f -> (Lazy.ByteString -> a) -> JF m a
+  Stream :: MonadResource m => Method 'Complete f -> (ResumableSource m ByteString -> a) -> JF m a
+  Post   :: (forall f. Method 'Complete f) -> Lazy.ByteString -> (Lazy.ByteString -> a) -> JF m a
   Conc   :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
   Or     :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
   With   :: (Request -> Request) -> JenkinsT m b -> (b -> a) -> JF m a
@@ -126,7 +129,7 @@ runInternal
   :: (MonadIO m, MonadBaseControl IO m)
   => String -> Text -> Text -> JenkinsT m a -> m a
 runInternal h user token jenk = do
-  url <- liftIO (wrapException (Http.parseUrl h))
+  url <- liftIO (wrapException (Http.parseUrlThrow h))
   man <- liftIO (Http.newManager Http.tlsManagerSettings)
   runInterpT (iterInterpT man jenk)
              (Http.applyBasicAuth (Text.encodeUtf8 user) (Text.encodeUtf8 token) url)
@@ -182,13 +185,15 @@ interpreter man = go where
     res <- runInterpT (iterInterpT man jenk) (f req)
     runInterpT (next res) req
 
-oneshotReq :: MonadIO m => Request -> Http.Manager -> m ByteString
-oneshotReq req = liftIO . wrapException . liftM Http.responseBody . Http.httpLbs req
+oneshotReq :: MonadIO m => Request -> Http.Manager -> m Lazy.ByteString
+oneshotReq req =
+  liftIO . wrapException . fmap Http.responseBody . Http.httpLbs req
 
 streamReq
   :: (MonadBaseControl IO m, MonadResource m)
-  => Request -> Http.Manager -> m (ResumableSource m Strict.ByteString)
-streamReq req = wrapException . liftM Http.responseBody . Http.http req
+  => Request -> Http.Manager -> m (ResumableSource m ByteString)
+streamReq req =
+  wrapException . fmap Http.responseBody . Http.http req
 
 intoM
   :: forall m a. (MonadIO m, MonadBaseControl IO m)
@@ -203,17 +208,21 @@ prepareGet m r = r
   , Http.path   = Http.path r `slash` render m
   }
 
-preparePost :: Method 'Complete f -> ByteString -> Request -> Request
+preparePost :: Method 'Complete f -> Lazy.ByteString -> Request -> Request
 preparePost m body r = r
-  { Http.checkStatus   = statusCheck
+  { Http.checkResponse = statusCheck
   , Http.redirectCount = 0
   , Http.requestBody   = Http.RequestBodyLBS body
   , Http.method        = "POST"
   , Http.path          = Http.path r `slash` render m
   }
  where
-  statusCheck s@(Status st _) hs cookie_jar =
-    if 200 <= st && st < 400 then Nothing else Just . toException $ Http.StatusCodeException s hs cookie_jar
+  statusCheck _req res =
+    unless (200 <= st && st < 400) $ do
+      chunk <- Http.brReadSome (Http.responseBody res) 1024
+      Http.throwHttp (Http.StatusCodeException (() <$ res) (ByteString.Lazy.toStrict chunk))
+   where
+    Status st _ = Http.responseStatus res
 
 wrapException :: (MonadBaseControl IO m, MonadIO m) => m a -> m a
 wrapException m = m `catch` (liftIO . throwIO .  JenkinsHttpException)

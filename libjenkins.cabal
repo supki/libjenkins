@@ -1,5 +1,5 @@
 name:                libjenkins
-version:             0.8.3
+version:             0.8.4
 synopsis:            Jenkins API interface
 description:         Jenkins API interface. It supports REST and Discovery APIs
 license:             BSD2
@@ -27,7 +27,7 @@ source-repository head
 source-repository this
   type:     git
   location: https://github.com/supki/libjenkins
-  tag:      0.8.3
+  tag:      0.8.4
 
 library
   default-language:
@@ -41,7 +41,7 @@ library
     , containers
     , free          >= 4.10
     , http-conduit  >= 2.1.8
-    , http-client   >= 0.4.19
+    , http-client   >= 0.5.5
     , http-types    >= 0.8
     , monad-control >= 0.3
     , profunctors   >= 4.2
