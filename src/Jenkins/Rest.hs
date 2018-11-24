@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -46,7 +47,11 @@ import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import           Control.Monad.Trans.Resource (MonadResource)
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.ByteString as Strict
+#if (MIN_VERSION_conduit(1,3,0)) || (MIN_VERSION_http_conduit(2,3,0))
+import           Data.Conduit (ConduitM)
+#else
 import           Data.Conduit (ResumableSource)
+#endif
 import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
 import           Data.Text (Text)
@@ -61,6 +66,11 @@ import           Jenkins.Rest.Internal
 import           Jenkins.Rest.Method
 import           Jenkins.Rest.Method.Internal
 
+#if (MIN_VERSION_conduit(1,3,0)) || (MIN_VERSION_http_conduit(2,3,0))
+type HttpSource m o = ConduitM () o m ()
+#else
+type HttpSource m o = ResumableSource m o
+#endif
 
 -- | Run a 'JenkinsT' action
 --
@@ -97,7 +107,7 @@ get (Formatter f) m = liftJ (Get (f m) id)
 -- 'stream', unlike 'get', is constant-space
 stream
   :: MonadResource m
-  => Formatter f -> (forall g. Method 'Complete g) -> JenkinsT m (ResumableSource m Strict.ByteString)
+  => Formatter f -> (forall g. Method 'Complete g) -> JenkinsT m (HttpSource m Strict.ByteString)
 stream (Formatter f) m = liftJ (Stream (f m) id)
 
 -- | Perform a @POST@ request

@@ -42,7 +42,11 @@ import           Control.Monad.Writer (MonadWriter(..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import qualified Data.ByteString.Lazy as ByteString.Lazy
+#if (MIN_VERSION_conduit(1,3,0)) || (MIN_VERSION_http_conduit(2,3,0))
+import           Data.Conduit (ConduitM)
+#else
 import           Data.Conduit (ResumableSource)
+#endif
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable)
@@ -56,6 +60,11 @@ import           Jenkins.Rest.Method.Internal (Method, Type(..), render, slash)
 
 {-# ANN module ("HLint: ignore Use join" :: String) #-}
 
+#if (MIN_VERSION_conduit(1,3,0)) || (MIN_VERSION_http_conduit(2,3,0))
+type HttpSource m o = ConduitM () o m ()
+#else
+type HttpSource m o = ResumableSource m o
+#endif
 
 -- | The value of this type describes Jenkins REST API requests sequence
 newtype JenkinsT m a = JenkinsT { unJenkinsT :: FT (JF m) m a }
@@ -97,7 +106,7 @@ instance MonadError e m => MonadError e (JenkinsT m) where
 
 data JF :: (* -> *) -> * -> * where
   Get    :: Method 'Complete f -> (Lazy.ByteString -> a) -> JF m a
-  Stream :: MonadResource m => Method 'Complete f -> (ResumableSource m ByteString -> a) -> JF m a
+  Stream :: MonadResource m => Method 'Complete f -> (HttpSource m ByteString -> a) -> JF m a
   Post   :: (forall f. Method 'Complete f) -> Lazy.ByteString -> (Lazy.ByteString -> a) -> JF m a
   Conc   :: JenkinsT m a -> JenkinsT m b -> (a -> b -> c) -> JF m c
   Or     :: JenkinsT m a -> (JenkinsException -> JenkinsT m a) -> JF m a
@@ -191,7 +200,7 @@ oneshotReq req =
 
 streamReq
   :: (MonadBaseControl IO m, MonadResource m)
-  => Request -> Http.Manager -> m (ResumableSource m ByteString)
+  => Request -> Http.Manager -> m (HttpSource m ByteString)
 streamReq req =
   wrapException . fmap Http.responseBody . Http.http req
 
