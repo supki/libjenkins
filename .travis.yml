@@ -4,23 +4,25 @@ sudo: false
 
 matrix:
   include:
-    - env: CABALVER=1.24 GHCVER=8.0.2
+    - env: CABALVER=2.4 GHCVER=8.4.4 ALLOWNEWER=--allow-newer
+      addons: {apt: {packages: [cabal-install-2.4,ghc-8.4.4],sources: [hvr-ghc]}}
+    - env: CABALVER=1.24 GHCVER=8.0.2 ALLOWNEWER=--allow-newer
       addons: {apt: {packages: [cabal-install-1.24,ghc-8.0.2],sources: [hvr-ghc]}}
-    - env: CABALVER=1.22 GHCVER=7.10.3
+    - env: CABALVER=1.22 GHCVER=7.10.3 ALLOWNEWER=
       addons: {apt: {packages: [cabal-install-1.22,ghc-7.10.3],sources: [hvr-ghc]}}
-    - env: CABALVER=head GHCVER=head
+    - env: CABALVER=head GHCVER=head ALLOWNEWER=--allow-newer
       addons: {apt: {packages: [cabal-install-head,ghc-head],  sources: [hvr-ghc]}}
 
   allow_failures:
-    - env: CABALVER=head GHCVER=head
+    - env: CABALVER=head GHCVER=head ALLOWNEWER=--allow-newer
 
 before_install:
   - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:$PATH
 
 install:
   - cabal update
-  - cabal install --enable-tests --allow-newer --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal
+  - cabal install --enable-tests $ALLOWNEWER --only-dependencies libjenkins.cabal example/libjenkins-examples.cabal
 
 script:
-    - cabal install --enable-tests --allow-newer libjenkins.cabal example/libjenkins-examples.cabal
-    - cabal sdist && cabal install --enable-tests --allow-newer dist/libjenkins-*.tar.gz
+    - cabal install --enable-tests $ALLOWNEWER libjenkins.cabal example/libjenkins-examples.cabal
+    - cabal sdist && cabal install --enable-tests $ALLOWNEWER dist/libjenkins-*.tar.gz
