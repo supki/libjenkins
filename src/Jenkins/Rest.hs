@@ -46,7 +46,6 @@ import           Control.Monad.Trans.Control (MonadBaseControl(..))
 import           Control.Monad.Trans.Resource (MonadResource)
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.ByteString as Strict
-import           Data.Conduit (ResumableSource)
 import           Data.Data (Data, Typeable)
 import qualified Data.Foldable as F
 import           Data.Text (Text)

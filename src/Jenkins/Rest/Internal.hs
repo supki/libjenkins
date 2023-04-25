@@ -20,6 +20,7 @@ module Jenkins.Rest.Internal
   , JF(..)
   , JenkinsException(..)
   , iter
+  , ResumableSource
   ) where
 
 #if __GLASGOW_HASKELL__ < 710
@@ -42,7 +43,8 @@ import           Control.Monad.Writer (MonadWriter(..))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import qualified Data.ByteString.Lazy as ByteString.Lazy
-import           Data.Conduit (ResumableSource)
+import           Data.Conduit (ConduitM)
+import qualified Data.Kind as Ghc (Type)
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import           Data.Typeable (Typeable)
@@ -94,8 +96,9 @@ instance MonadError e m => MonadError e (JenkinsT m) where
   throwError = JenkinsT . throwError
   m `catchError` f = JenkinsT (unJenkinsT m `catchError` (unJenkinsT . f))
 
+type ResumableSource m o = ConduitM () o m ()
 
-data JF :: (* -> *) -> * -> * where
+data JF :: (Ghc.Type -> Ghc.Type) -> Ghc.Type -> Ghc.Type where
   Get    :: Method 'Complete f -> (Lazy.ByteString -> a) -> JF m a
   Stream :: MonadResource m => Method 'Complete f -> (ResumableSource m ByteString -> a) -> JF m a
   Post   :: (forall f. Method 'Complete f) -> Lazy.ByteString -> (Lazy.ByteString -> a) -> JF m a

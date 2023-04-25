@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-overflowed-literals #-}
 -- | Discover Jenkins on the network
 module Jenkins.Discover
   ( Discover(..)
@@ -17,10 +18,9 @@ import qualified Data.ByteString as ByteString
 import           Data.Map (Map)
 import qualified Data.Map as Map
 import           Data.Maybe (mapMaybe)
-import           Data.Monoid ((<>))
 import           Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import           Network.BSD
+import           Network.BSD (getProtocolNumber)
 import           Network.Socket
 import           Network.Socket.ByteString as ByteString
 import           System.Timeout (timeout)

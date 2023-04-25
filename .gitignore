@@ -1,8 +1,5 @@
 dist/
-cabal-dev/
-cabal.sandbox.config
-.cabal-sandbox
 README.html
 Gemfile.lock
-result
-env.nix
+.stack-work/
+stack.yaml.lock
